@@ -1,272 +1,78 @@
-<!doctype html><html lang="en" data-theme="dark"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Internet Speed Test</title>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Интернетометр</title>
 <style>
-@font-face{font-family:'YS Text';font-weight:400;font-display:swap;src:url(https://yastatic.net/s3/home/fonts/ys/1/text-regular.woff2) format('woff2')}
-@font-face{font-family:'YS Text';font-weight:500;font-display:swap;src:url(https://yastatic.net/s3/home/fonts/ys/1/text-medium.woff2) format('woff2')}
-:root{--i-color-text-secondary:#8a8a8e;--line:rgba(127,127,127,.18);--accent:#3d8b7a;--color-danger:#d63939;--color-info:#4299e1}
-html[data-theme="light"]{--accent:#4d9e91}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%}
-body{background:#161617;color:#fff;font-family:'YS Text',-apple-system,system-ui,sans-serif;
-  display:flex;flex-direction:column;align-items:center;padding:20px 16px 32px}
-html[data-theme="light"] body{background:#fff;color:#161617}
-.speedometer{position:relative;margin-bottom:24px;--inner-text-color:var(--accent)}
-.speedometer{margin-top:64px}
-.speedometer{margin-top:48px}
-.speedometer{margin-top:16px}
-.speedometer__svg-container{position:relative}
-.speedometer__svg{height:100%;width:261px}
-.speedometer__svg{width:698px}
-.speedometer__svg{width:957px}
-.speedometer__svg .speed{opacity:0}
-.speedometer__svg .speed.speedometer__svg-visible{opacity:1;-webkit-transition:all .2s ease-in-out;transition:all .2s ease-in-out;-webkit-transform:translateZ(0);transform:translateZ(0)}
-.speedometer__svg_tablet{opacity:0}
-.speedometer__svg_mobile{opacity:1}
-.speedometer__svg_mobile{opacity:0}
-.speedometer__svg_tablet{opacity:1}
-.speedometer__svg_tablet{opacity:0}
-.speedometer__svg_desktop{opacity:1}
-.speedometer__svg_dynamic-svg{position:absolute;top:0;left:0}
-.speedometer__container{position:absolute;top:0;left:0;width:100%;height:100%}
-.speedometer__button{overflow:hidden}
-.speedometer__button>.g-button__text{width:100%;height:100%}
-.speedometer__button-inner{width:100%;height:100%;margin:15px 0 0}
-.speedometer__button-inner{margin:0}
-.speedometer__button-inner-text{white-space:normal;line-height:normal;width:250px;font-size:32px;-webkit-transition:color .15s linear;transition:color .15s linear}
-.speedometer__button-inner-text{width:460px;font-size:64px}
-.speedometer__button-inner-text{width:100%}
-.speedometer__info{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden}
-.speedometer__info-inner{width:100%;height:100%;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;margin:15px 0 0}
-.speedometer__info-inner{-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;margin:0}
-.speedometer__value-display{width:213px;text-align:center;margin:9px 0}
-.speedometer__value-display{margin:0}
-.speedometer__value-display__unit{font-size:15px;font-size:17px}
-.speedometer__value-display__icon{position:relative;vertical-align:middle;bottom:1px;width:12px;height:12px}
-.speedometer__value-display__icon{width:14px;height:14px}
-.speedometer__value-display__icon_upload{-webkit-transform:scaleY(-1);-ms-transform:scaleY(-1);transform:scaleY(-1)}
-.speedometer__value-display__value{line-height:100%;font-size:32px;margin:4px 0}
-.speedometer__value-display__value{margin:8px 0;font-size:48px}
-.speedometer__value-display__value{font-size:64px}
-.speedometer__value-display__value_progress{color:var(--accent)}
-.speedometer__value-display__value_initial{color:var(--i-color-text-secondary)}
-.speedometer:hover .speedometer__button-inner-text{color:var(--inner-text-color)}
-.speedometer:hover .speedometer__button-inner-text{color:currentColor}
-.speedometer:active .speedometer__button-inner-text{color:var(--inner-text-color)}
-.speedometer{margin-bottom:14px}
-.speedometer{margin-top:4px}
-.speedometer__svg{height:50vh}
-.speedometer__button-inner-text{font-size:28px}
-.speedometer__value-display__value{font-size:4vh}
-.speedometer__value-display__unit{font-weight:500}
-.speedometer__info-inner{grid-gap:32px}
-.speedometer__info-inner{grid-gap:4px}
-.speedometer__value-display__unit{font-size:var(--g-text-body-1-font-size);line-height:var(--g-text-body-1-line-height)}
-.speedometer__value-display__unit{font-size:var(--g-text-body-short-font-size)}
-
-#dial{display:block;width:100%;height:auto;fill:var(--accent)}
-.speedometer__svg_tablet{opacity:1!important}
-.s-stage{position:relative;width:520px;max-width:94vw}
-.s-dyn{position:absolute;inset:0;width:100%;height:auto;pointer-events:none}
-#ind{stroke:var(--accent)}
-.s-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-#go{font-family:inherit;font-size:20px;font-weight:600;color:#161617;background:var(--accent,#fc0);border:0;border-radius:24px;cursor:pointer;padding:12px 34px;transition:filter .15s;box-shadow:0 2px 10px rgba(0,0,0,.25)}
-#go:hover{filter:brightness(1.08)}
-#go[disabled]{cursor:default;opacity:.5}
-.s-num{font-size:58px;font-weight:500;line-height:1;display:none}
-.s-num small{font-size:17px;color:var(--i-color-text-secondary);font-weight:400}
-.s-phase{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--i-color-text-secondary);margin-top:8px;min-height:1.1em}
-.s-reads{display:flex;gap:28px;margin-top:20px}
-.s-read{text-align:center}
-.s-read .v{font-size:21px;font-weight:500}.s-read .v small{font-size:11px;color:var(--i-color-text-secondary);font-weight:400}
-.s-read .l{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--i-color-text-secondary);margin-top:3px}
-.s-read.on .v{color:var(--accent)}
-.s-server{font-size:12px;color:var(--i-color-text-secondary);margin-top:14px;min-height:1.2em;text-align:center}
-.s-server b{color:inherit;font-weight:500}
-.s-info{width:520px;max-width:94vw;margin-top:26px}
-.s-info h3{font-size:15px;font-weight:500;margin:0 0 8px}
-.s-info .row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
-.s-info .row .k{color:var(--i-color-text-secondary)}.s-info .row .val{text-align:right}
-.s-restart{margin-top:18px;font-family:inherit;font-size:15px;font-weight:500;color:#fff;background:var(--accent);border:0;border-radius:22px;padding:11px 30px;cursor:pointer;display:none}
-.s-restart:hover{filter:brightness(1.08)}
-.s-alert{display:none;max-width:520px;width:94vw;margin:16px auto 0;padding:12px 16px;border-radius:10px;font-size:.95rem;line-height:1.35;text-align:center}.s-alert.show{display:block}.s-alert.danger{background:color-mix(in srgb,var(--color-danger) 14%,transparent);border:1px solid color-mix(in srgb,var(--color-danger) 40%,transparent);color:var(--color-danger)}.s-alert.info{background:color-mix(in srgb,var(--color-info) 14%,transparent);border:1px solid color-mix(in srgb,var(--color-info) 40%,transparent);color:var(--color-info)}
-.s-result{display:none;gap:18px;align-items:flex-start;justify-content:center}
-.s-result.show{display:flex}
-.rc{text-align:center;min-width:66px}
-.rc .rl{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--i-color-text-secondary)}
-.rc .rv{font-size:27px;font-weight:600;line-height:1.1;margin-top:3px}
-.rc .ru{font-size:11px;color:var(--i-color-text-secondary)}
-</style></head>
+  :root { color-scheme: light dark; }
+  body { margin:0; padding:24px 16px; font-family:-apple-system,system-ui,sans-serif;
+         background:#fff; color:#161617; display:flex; flex-direction:column; align-items:center; }
+  @media (prefers-color-scheme: dark) { body { background:#161617; color:#fff; } }
+  h2 { margin:0 0 18px; font-size:20px; }
+  #go { font-size:20px; font-weight:600; color:#161617; background:#fc0; border:0;
+        border-radius:26px; padding:14px 44px; cursor:pointer; }
+  #go:disabled { opacity:.5; cursor:default; }
+  #status { margin-top:16px; font-size:14px; opacity:.75; min-height:1.4em; }
+  #results { margin-top:20px; width:100%; max-width:420px; display:none; }
+  .row { display:flex; justify-content:space-between; padding:12px 4px;
+         border-top:1px solid rgba(128,128,128,.25); font-size:16px; }
+  .row .v { font-weight:700; font-variant-numeric:tabular-nums; }
+  .big { font-size:30px; font-weight:700; text-align:center; margin:8px 0 4px; font-variant-numeric:tabular-nums; }
+  .lbl { text-align:center; font-size:12px; opacity:.6; text-transform:uppercase; letter-spacing:.5px; }
+  #err { color:#d33; margin-top:14px; max-width:420px; display:none; font-size:14px; }
+  #meta { margin-top:16px; font-size:12px; opacity:.55; text-align:center; }
+</style>
+</head>
 <body>
-<div class="speedometer s-stage">
-  <div class="speedometer__svg-container" style="position:relative">
-    <svg xmlns="http://www.w3.org/2000/svg" id="dial" width="652" height="392" fill="var(--accent)" stroke="var(--accent)" stroke-width="0" class="speedometer__svg speedometer__svg_tablet" viewBox="0 0 652 392"><path d="M316.84 88h-2.12V77.56l-2.7 2.65v-2.16l2.99-2.96h1.83zm7.73.18q-1.12 0-2.09-.41a5 5 0 0 1-1.7-1.26 6 6 0 0 1-1.12-2.07 9 9 0 0 1-.42-2.9q0-1.64.41-2.88a6 6 0 0 1 1.14-2.07 5 5 0 0 1 1.7-1.24 5.3 5.3 0 0 1 4.15 0q.97.41 1.7 1.24a6 6 0 0 1 1.1 2.05q.42 1.23.42 2.86 0 1.64-.41 2.88a6 6 0 0 1-1.12 2.09 4.7 4.7 0 0 1-3.76 1.71Zm-.02-1.75q.67 0 1.24-.25.58-.27 1-.84.42-.58.66-1.5.25-.93.25-2.28t-.25-2.27a4 4 0 0 0-.67-1.51q-.4-.6-.99-.85-.57-.27-1.22-.27-.67 0-1.24.27-.58.25-1.01.85-.42.57-.67 1.5a9 9 0 0 0-.23 2.28q0 1.35.23 2.28.26.92.67 1.5.43.57 1 .84.6.25 1.23.25Zm12.1 1.75q-1.1 0-2.08-.41a5 5 0 0 1-1.7-1.26 6 6 0 0 1-1.12-2.07 9 9 0 0 1-.42-2.9q0-1.64.42-2.88a6 6 0 0 1 1.13-2.07 5 5 0 0 1 1.7-1.24 5.3 5.3 0 0 1 4.15 0q.97.41 1.7 1.24a6 6 0 0 1 1.1 2.05q.42 1.23.42 2.86 0 1.64-.41 2.88a6 6 0 0 1-1.12 2.09 4.7 4.7 0 0 1-3.76 1.71Zm0-1.75q.66 0 1.23-.25.58-.27 1-.84.42-.58.66-1.5.25-.93.25-2.28t-.25-2.27a4 4 0 0 0-.67-1.51q-.4-.6-.99-.85-.57-.27-1.22-.27-.67 0-1.24.27-.58.25-1.01.85-.42.57-.67 1.5a9 9 0 0 0-.23 2.28q0 1.35.23 2.28.26.92.67 1.5.43.57 1 .84.6.25 1.23.25ZM406.98 375h-2.12v-10.44l-2.7 2.65v-2.16l2.99-2.96h1.83zm7.73.18q-1.12 0-2.1-.41a5 5 0 0 1-1.68-1.26 6 6 0 0 1-1.14-2.07 9 9 0 0 1-.41-2.9q0-1.64.41-2.88a6 6 0 0 1 1.14-2.07 5 5 0 0 1 1.69-1.24 5.3 5.3 0 0 1 4.16 0q.96.41 1.69 1.24a6 6 0 0 1 1.11 2.05q.42 1.23.42 2.86 0 1.64-.42 2.88a6 6 0 0 1-1.11 2.09 4.7 4.7 0 0 1-3.76 1.71Zm-.02-1.75q.67 0 1.24-.25.57-.27 1-.84.42-.58.66-1.5.25-.93.25-2.28t-.25-2.27a4 4 0 0 0-.67-1.51q-.41-.6-.99-.85-.58-.27-1.22-.27-.67 0-1.25.27-.57.25-1 .85-.42.57-.67 1.5a9 9 0 0 0-.23 2.28q0 1.35.23 2.28.26.92.67 1.5.43.57 1 .84.59.25 1.23.25Zm12.1 1.75q-1.1 0-2.08-.41a5 5 0 0 1-1.7-1.26 6 6 0 0 1-1.13-2.07 9 9 0 0 1-.41-2.9q0-1.64.41-2.88a6 6 0 0 1 1.14-2.07 5 5 0 0 1 1.69-1.24 5.3 5.3 0 0 1 4.16 0q.96.41 1.69 1.24a6 6 0 0 1 1.12 2.05q.4 1.23.4 2.86 0 1.64-.4 2.88a6 6 0 0 1-1.12 2.09 4.7 4.7 0 0 1-3.76 1.71Zm-.01-1.75q.66 0 1.24-.25.58-.27 1-.84.42-.58.66-1.5.25-.93.25-2.28t-.25-2.27a4 4 0 0 0-.67-1.51q-.4-.6-.99-.85-.58-.27-1.22-.27-.67 0-1.25.27-.58.25-1 .85-.42.57-.67 1.5a9 9 0 0 0-.23 2.28q0 1.35.23 2.28.26.92.67 1.5.43.57 1 .84.58.25 1.23.25Zm12.1 1.75q-1.1 0-2.08-.41a5 5 0 0 1-1.7-1.26 6 6 0 0 1-1.13-2.07 9 9 0 0 1-.41-2.9q0-1.64.41-2.88a6 6 0 0 1 1.14-2.07 5 5 0 0 1 1.69-1.24 5.3 5.3 0 0 1 4.16 0q.96.41 1.69 1.24a6 6 0 0 1 1.11 2.05q.42 1.23.42 2.86 0 1.64-.42 2.88a6 6 0 0 1-1.11 2.09 4.7 4.7 0 0 1-3.76 1.71Zm-.01-1.75q.67 0 1.24-.25.57-.27.99-.84.43-.58.67-1.5.25-.93.25-2.28t-.25-2.27a4 4 0 0 0-.67-1.51q-.41-.6-.99-.85-.58-.27-1.22-.27-.67 0-1.25.27-.58.25-1 .85-.42.57-.67 1.5a9 9 0 0 0-.23 2.28q0 1.35.23 2.28.25.92.67 1.5.43.57 1 .84.58.25 1.23.25Zm-224.71 1.75q-1.12 0-2.1-.41a5 5 0 0 1-1.68-1.26 6 6 0 0 1-1.14-2.07 9 9 0 0 1-.41-2.9q0-1.64.41-2.88a6 6 0 0 1 1.14-2.07 5 5 0 0 1 1.69-1.24 5.3 5.3 0 0 1 4.16 0q.96.41 1.69 1.24a6 6 0 0 1 1.11 2.05q.42 1.23.42 2.86 0 1.64-.42 2.88a6 6 0 0 1-1.11 2.09 4.7 4.7 0 0 1-3.76 1.71Zm-.02-1.75q.66 0 1.24-.25.57-.27.99-.84.43-.58.67-1.5.24-.93.25-2.28 0-1.35-.25-2.27a4 4 0 0 0-.67-1.51q-.41-.6-.99-.85-.58-.27-1.22-.27-.67 0-1.25.27-.57.25-1 .85-.42.57-.67 1.5a9 9 0 0 0-.23 2.28q0 1.35.23 2.28.25.92.67 1.5.42.57 1 .84.59.25 1.23.25ZM196 328h1.02v48h-2.14l.3-48zm261.12 48h-2.14v-48h1.85zm-269.28-32.22-1.73 31.95-1.98-.12 2.08-31.93zm280.03 31.83q-.99.07-1.99.12l-1.72-31.95 1.63-.1zm-288.95-32.58-3.65 31.79-1.96-.24 4-31.75zm299.78 31.55-1.97.24-3.65-31.8q.81-.08 1.62-.19zm-308.63-32.84-5.56 31.51-1.94-.35 5.9-31.45zm319.36 31.16-1.94.35-5.56-31.5 1.6-.3zm-328.1-32.98-3.73 15.56-3.73 15.56-1.92-.47 7.8-31.03zm338.72 30.65-1.92.47-7.46-31.12 1.57-.38zm-347.33-32.99-9.34 30.6-1.89-.58 9.68-30.5zM510.5 367.6l-1.88.58-9.34-30.6 1.55-.48zm-366.23-32.88-11.2 29.97-1.84-.7 11.52-29.85zm376.5 29.27-1.85.7-11.19-29.97 1.52-.58zM136 331.34l-13 29.24-1.8-.81 13.3-29.1zm394.8 28.43-1.81.81L516 331.34l1.48-.67zm-402.85-32.3-14.74 28.4-1.75-.92 15.05-28.24zm412.59 27.48-1.75.92-14.74-28.4 1.44-.76zm-420.39-31.84-16.43 27.46-1.7-1.02 16.73-27.28q.7.44 1.4.84Zm429.83 26.44-1.7 1.02-16.42-27.46 1.39-.84zM112.61 318.3l-9.03 13.2-9.02 13.2q-.82-.55-1.63-1.12l18.34-26.21zm446.46 25.28-1.63 1.13-18.05-26.42 1.34-.92zm-453.69-30.56-19.61 25.29-1.56-1.23 19.89-25.06zm462.41 24.07-1.56 1.22-19.61-25.29 1.28-1zM98.48 307.33l-21.1 24.06-1.48-1.32 21.36-23.82zm477.62 22.74-1.48 1.31-21.1-24.05 1.22-1.08zm-472.86-40.15-33.73 34.14-1.48-1.49-.1-.08 34.15-33.73zm480.82 32.57-.09.08-1.4 1.4-.08.1-33.73-34.15 1.15-1.16zM85.75 294.74 61.93 316.1l-1.32-1.48 24.06-21.1zm505.64 19.88-1.32 1.48-23.82-21.36 1.08-1.22zM79.98 287.9l-25.07 19.89-1.22-1.56 25.29-19.61zm518.32 18.33-1.21 1.56-25.07-19.89 1-1.28zm-523.67-25.5-26.21 18.34-1.13-1.63 26.42-18.05zm530.07 16.71q-.55.82-1.12 1.63l-26.21-18.34.92-1.34zM69.73 273.25l-27.28 16.73-1.02-1.7 27.46-16.42zm540.84 15.03-1.02 1.7-27.28-16.73q.44-.7.84-1.4zM65.29 265.49l-28.24 15.05-.92-1.75 28.4-14.74zm550.58 13.3-.92 1.75-28.24-15.05.76-1.44zm4.71-9.8-.81 1.8-29.1-13.3.67-1.49zM61.33 257.48l-29.1 13.31-.81-1.8L60.66 256q.33.76.67 1.48Zm-3.47-8.23-29.85 11.52-.7-1.85 29.97-11.19zm566.84 9.67-.71 1.85-29.85-11.52.58-1.52zM54.9 240.83l-30.5 9.68-.58-1.89 30.6-9.34zm573.28 7.79-.58 1.89-30.5-9.68.48-1.55zM52.46 232.25l-31.03 7.8-.47-1.92 31.12-7.46zm578.58 5.88-.47 1.92-31.03-7.8.38-1.58zm-580.49-14.6-31.45 5.9-.35-1.94 31.5-5.56zm582.7 3.96-.35 1.94-31.45-5.9.3-1.6zM49.17 214.7l-31.75 4-.24-1.97 31.8-3.65q.08.81.19 1.62Zm585.65 2.03-.24 1.96-31.75-4 .2-1.6zm-586.5-10.94-31.93 2.08-.12-1.99 31.95-1.72zm587.41.1-.12 1.98-31.93-2.08.1-1.63zM64 195.17v1.66l-48 .29v-2.24zm572 .83v1.12l-48-.3v-1.65l48-.29zm-587.68-9.79-.1 1.63-31.95-1.73.12-1.98zm587.41-.1-15.97.87-15.98.86-.1-1.63 31.93-2.08zM49.17 177.3l-.2 1.62-31.79-3.65.24-1.96zm585.65-2.03-31.8 3.65q-.08-.81-.19-1.62l31.75-4zm-584.27-6.8-.3 1.6-31.5-5.56.35-1.94zm582.7-3.96-31.5 5.56-.3-1.6 31.45-5.9zm-580.79-4.75-.38 1.57-31.12-7.47.47-1.91zm578.58-5.89-15.56 3.73-15.56 3.73-.38-1.58 31.03-7.8zm-576.14-2.7-.48 1.55-30.6-9.34.58-1.89zm573.28-7.79-30.6 9.34-.48-1.55 30.5-9.68zm-570.32-.63-.58 1.52-29.97-11.2.7-1.84zm566.84-9.67-29.98 11.19-.58-1.52 29.85-11.52zm-563.37 1.44-.67 1.48-29.24-13 .8-1.8zm559.25-11.51L591.34 136l-.67-1.48 29.1-13.31zm-555.29 3.5-.76 1.44-28.4-14.74.92-1.75zm550.58-13.3-28.4 14.74-.76-1.44 28.24-15.05zm-546.14 5.54q-.44.7-.84 1.4l-27.46-16.43 1.02-1.7zm540.84-15.03-27.46 16.42-.84-1.39 27.28-16.73zm-535.94 7.55-.92 1.34-26.42-18.05 1.13-1.63zM604.7 94.56l-13.2 9.02-13.2 9.03-.93-1.34 26.21-18.34zM79.98 104.1l-1 1.28-25.29-19.61 1.22-1.56zM598.3 85.77l-25.28 19.61-1-1.28 25.07-19.89zm-495.06 16.32-1.16 1.15-34.14-33.73 1.57-1.57zm480.73-32.67.1.1-34.16 33.72-1.15-1.16 33.73-34.14zM85.75 97.26l-1.08 1.22-24.06-21.1 1.32-1.48zm505.64-19.88-24.06 21.1-1.08-1.22 23.82-21.36zM98.48 84.67l-1.22 1.08L75.9 61.93l1.48-1.32zM576.1 61.93l-21.36 23.82-1.22-1.08 21.1-24.06zM105.38 78.98l-1.28 1-19.89-25.07 1.56-1.22zm462.41-24.07L547.9 79.98l-1.28-1 19.61-25.29zM112.61 73.7l-1.34.93-18.34-26.21 1.63-1.13zm446.46-25.28-18.34 26.21-1.34-.92 18.05-26.42zM120.15 68.89q-.7.4-1.4.84l-16.73-27.28 1.7-1.02zm429.83-26.44-16.73 27.28q-.7-.44-1.4-.84l16.43-27.46zM127.95 64.53l-1.44.76-15.05-28.24 1.75-.92zm412.59-27.48-15.05 28.24-1.44-.76 14.74-28.4zM197.02 16v48h-1.85l-.29-48zM456 16h1.12l-.3 48h-1.84V16zM327.02 64h-2.04V16h2.04zM136 60.66l-1.48.67-13.31-29.1 1.8-.81zm394.8-28.43-13.32 29.1-1.48-.67 13-29.24zM144.27 57.28l-1.52.58-11.52-29.85 1.85-.7zM520.77 28l-11.52 29.86-1.52-.58 11.19-29.97zM152.72 54.42l-1.55.48-9.68-30.5q.94-.3 1.89-.58zM510.5 24.4l-9.67 30.5-1.55-.48 9.34-30.6zM161.33 52.08l-1.57.38-7.81-31.03 1.92-.47zm338.72-30.65-7.8 31.03-1.58-.38 7.46-31.12zM170.07 50.26l-1.6.29-5.9-31.45 1.94-.35zM489.43 19.1l-2.95 15.72-2.95 15.73-1.6-.3 5.56-31.5zm-10.73-1.68-4 31.75-1.62-.2 3.65-31.79zM178.92 48.97l-1.62.2-4-31.75 1.97-.24zm8.92-.75-1.63.1-2.08-31.93 1.98-.12zm280.03-31.83-2.08 31.93-1.63-.1 1.72-31.95zM207.82 48h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.83 0h-1.96V16h1.96zm10.84 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.83 0h-1.96V16h1.96zm10.84 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.84 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm21.67 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.84 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.84 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97zm10.84 0h-1.97V16h1.97zm10.83 0h-1.97V16h1.97z"/></svg>
-    <svg class="s-dyn" width="652" height="392" viewBox="0 0 652 392" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path id="ind" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" d=""></path>
-    </svg>
-    <div class="s-center">
-      <button id="go">Test</button>
-      <div class="s-num" id="num">0<small> Mbps</small></div>
-      <div class="s-phase" id="phase"></div>
-      <div class="s-result" id="result">
-        <div class="rc"><div class="rl">Download</div><div class="rv" id="rv-dl">&mdash;</div><div class="ru">Mbps</div></div>
-        <div class="rc"><div class="rl">Upload</div><div class="rv" id="rv-ul">&mdash;</div><div class="ru">Mbps</div></div>
-        <div class="rc"><div class="rl">Ping</div><div class="rv" id="rv-pg">&mdash;</div><div class="ru">ms</div></div>
-      </div>
-    </div>
-  </div>
+<h2>Интернетометр</h2>
+<button id="go">Измерить</button>
+<div id="status"></div>
+<div id="err"></div>
+<div id="results">
+  <div class="big"><span id="dl">0</span> <small>Мбит/с</small></div>
+  <div class="lbl">скорость получения</div>
+  <div class="row"><span>Отдача</span><span class="v"><span id="ul">—</span> Мбит/с</span></div>
+  <div class="row"><span>Пинг</span><span class="v"><span id="pg">—</span> мс</span></div>
+  <div class="row"><span>IP</span><span class="v" id="ip" style="font-weight:400">—</span></div>
+  <div class="row"><span>Сервер</span><span class="v" id="srv" style="font-weight:400">—</span></div>
 </div>
-<div class="s-alert" id="alert" role="alert"></div>
-<div class="s-server" id="server"></div>
-<button class="s-restart" id="restart">Test again</button>
-<div class="s-info">
-  <h3>Your connection</h3>
-  <div class="row"><span class="k">IPv4 address</span><span class="val" id="i-ip4">&mdash;</span></div>
-  <div class="row"><span class="k">IPv6 address</span><span class="val" id="i-ip6">&mdash;</span></div>
-  <div class="row"><span class="k">Region</span><span class="val" id="i-reg">&mdash;</span></div>
-</div>
+<div id="meta"></div>
 <script>
-(function(){
-  var START0=1123.19, ARC=1466.38, PERIM=1726.38;
-  function pointAt(s){ s=((s%PERIM)+PERIM)%PERIM;
-    if(s<260)return[196+s,4];
-    if(s<863.19){var t=(s-260)/192;return[456+192*Math.sin(t),196-192*Math.cos(t)];}
-    if(s<1123.19)return[456-(s-863.19),388];
-    var t=(s-1123.19)/192;return[196-192*Math.sin(t),196+192*Math.cos(t)]; }
-  function arcD(frac){ var L=ARC*Math.max(0,Math.min(1,frac)); if(L<0.5)L=0.5;
-    var p=pointAt(START0),d='M'+p[0].toFixed(1)+' '+p[1].toFixed(1);
-    for(var x=3;x<=L;x+=3){p=pointAt(START0+x);d+='L'+p[0].toFixed(1)+' '+p[1].toFixed(1);}
-    p=pointAt(START0+L);d+='L'+p[0].toFixed(1)+' '+p[1].toFixed(1);return d; }
-  function logFrac(v){ if(v<=0)return 0; var f=(v<=100)?0.5*Math.log10(v+1)/Math.log10(101):0.5+0.5*(Math.log10(v)-2); return Math.max(0,Math.min(1,f)); }
-
-  var qs=new URLSearchParams(location.search);
-  var th=qs.get('theme'); if(th)document.documentElement.setAttribute('data-theme',th);
-  var demo=location.protocol==='file:'||qs.get('demo')==='1';
-  var engine=qs.get('engine')||'yandex';
-  var $=function(id){return document.getElementById(id);};
-  var ind=$('ind'),go=$('go'),num=$('num'),phase=$('phase'),restart=$('restart'),server=$('server');
-  var busy=false;
-
-  function setArc(f){ ind.setAttribute('d',arcD(f)); }
-  function setNum(v){ num.innerHTML=(typeof v==='number'?(v<100?v.toFixed(1):Math.round(v)):v)+'<small> Mbps</small>'; }
-  function setPhase(t){ phase.textContent=t||''; }
-  function showAlert(m,t){ var a=$('alert'); a.textContent=m; a.className='s-alert show '+(t||'danger'); }
-  function hideAlert(){ $('alert').className='s-alert'; }
-  function setRes(id,v){ var e=$('rv-'+id); if(e)e.textContent=v; }
-  function showResult(){ num.style.display='none'; phase.style.display='none'; var r=$('result'); if(r)r.classList.add('show'); }
-  function hideResult(){ var r=$('result'); if(r)r.classList.remove('show'); num.style.display='block'; phase.style.display=''; }
-  function finish(dl,ul,pg){ setRes('dl',(dl<100?dl.toFixed(1):Math.round(dl))); setRes('ul',(ul<100?ul.toFixed(1):Math.round(ul))); setRes('pg',pg); setArc(logFrac(dl)); showResult(); restart.style.display='inline-block'; }
-  function on(id){ ['pg','dl','ul'].forEach(function(x){$('r-'+x).classList.toggle('on',x===id);}); }
-  function read(id,val,unit){ $('v-'+id).innerHTML=val+(unit?'<small> '+unit+'</small>':''); }
-  function delay(ms){ return new Promise(function(r){setTimeout(r,ms);}); }
-
-  // ---- browser-side measurement (Yandex's own method) ----
-  function getProbes(){ return fetch('/cgi-bin/internetometer.cgi?action=probes',{cache:'no-store'}).then(function(r){return r.json();}); }
-  function hostOf(u){ try{return new URL(u).host;}catch(e){return '';} }
-  function dlUrls(p){ return p.download.probes.filter(function(x){return x.url.indexOf('50mb')>=0;}).map(function(x){return x.url;}); }
-
-  function ping(p){
-    var url=p.latency.probes[0].url, min=1e9, i=0;
-    function step(){ if(i>=5)return Promise.resolve(Math.round(min)); var t=performance.now();
-      return fetch(url,{cache:'no-store',mode:'cors'}).then(function(){var d=performance.now()-t;if(d<min)min=d;}).catch(function(){}).then(function(){i++;return step();}); }
-    return step();
-  }
-  function download(p,onSpeed){
-    var urls=dlUrls(p).slice(0,3); if(!urls.length)return Promise.resolve(0);
-    var bytes=0,t0=performance.now(),last=0,lastT=t0;
-    var ctrl=new AbortController(); var stop=setTimeout(function(){ctrl.abort();},10000);
-    var si=setInterval(function(){var now=performance.now();var inst=(bytes-last)*8/((now-lastT)/1000)/1e6;last=bytes;lastT=now;onSpeed(inst);},200);
-    function pull(u){ return fetch(u,{signal:ctrl.signal,cache:'no-store'}).then(function(r){var rd=r.body.getReader();
-      function loop(){return rd.read().then(function(res){if(res.done)return;bytes+=res.value.length;return loop();});} return loop();}).catch(function(){}); }
-    return Promise.all(urls.map(pull)).then(function(){clearTimeout(stop);clearInterval(si);
-      var secs=(performance.now()-t0)/1000; return bytes*8/secs/1e6; });
-  }
-  function upload(p,onSpeed){
-    return new Promise(function(res){
-      var up=p.upload.probes[0]; if(!up){res(0);return;}
-      var SIZE=8*1024*1024, url=up.url.replace(/&size=.*/,'')+'&size='+SIZE;
-      var body=new Uint8Array(SIZE);
-      // No Content-Type header -> CORS "simple request" (no preflight); CDN sends ACAO:*
-      var xhr=new XMLHttpRequest(); xhr.open('POST',url);
-      var t0=performance.now(),last=0,lastT=t0;
-      xhr.upload.onprogress=function(e){var now=performance.now();if(now-lastT<150)return;var inst=(e.loaded-last)*8/((now-lastT)/1000)/1e6;last=e.loaded;lastT=now;onSpeed(inst);};
-      xhr.onload=function(){var secs=(performance.now()-t0)/1000;res(SIZE*8/secs/1e6);};
-      xhr.onerror=function(){res(0);}; xhr.ontimeout=function(){res(0);}; xhr.timeout=20000;
-      xhr.send(body);
-    });
-  }
-
-  // ---- demo (file:// preview): fake live ramp ----
-  function demoRamp(target,onSpeed){ return new Promise(function(res){var v=0,k=0;var t=setInterval(function(){k++;v=target*(1-Math.exp(-k/8))+(Math.random()-0.5)*target*0.06;onSpeed(Math.max(0,v));if(k>=26){clearInterval(t);res(target);}},90);}); }
-
-  // ---- user-data block ----
-  function uaName(){ var u=navigator.userAgent,m;
-    if((m=u.match(/Firefox\/([\d.]+)/)))return 'Firefox '+m[1];
-    if((m=u.match(/Edg\/([\d.]+)/)))return 'Edge '+m[1];
-    if((m=u.match(/Chrome\/([\d.]+)/)))return 'Chrome '+m[1];
-    if((m=u.match(/Version\/([\d.]+).*Safari/)))return 'Safari '+m[1];
-    return u.slice(0,40); }
-  function loadUserInfo(){
-    if(demo){ $('i-ip4').textContent='91.78.21.105'; $('i-reg').textContent='Moscow'; return; }
-    if(engine==='ookla') return;   // Ookla fills IPv4/ISP from its own result (poll)
-    fetch('/cgi-bin/internetometer.cgi?action=ip',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){if(d.ip)$('i-ip4').textContent=d.ip;}).catch(function(){});
-    fetch('/cgi-bin/internetometer.cgi?action=region',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){if(d.name)$('i-reg').textContent=d.name;}).catch(function(){});
-  }
-
-  function reset(){ go.style.display='';num.style.display='none';setArc(0);setNum(0);setPhase('');on(null);
-    ['pg','dl','ul'].forEach(function(x){$('v-'+x).innerHTML='&mdash;';});server.textContent='';restart.style.display='none'; }
-
-  // Both engines measure on the ROUTER and stream live progress via polling
-  // (webs can't stream). Интернетометр -> internetometer.cgi (Yandex CDN, works
-  // without VPN); Speedtest -> speedtest_cli.cgi (Ookla, via VPN).
-  function run(){
-    if(busy)return; busy=true;
-    go.disabled=true;go.style.display='none';hideResult();num.style.display='block';restart.style.display='none';
-    setArc(0);setNum(0);setPhase('Connecting…');server.textContent='';hideAlert();
-    if(demo){ return runDemo(); }
-    return runEngine(engine==='ookla' ? 'speedtest_cli.cgi' : 'internetometer.cgi');
-  }
-
-  function runEngine(cgi){
-    setPhase('Starting…');
-    return fetch('/cgi-bin/'+cgi+'?action=start',{cache:'no-store'})
-      .then(function(r){return r.json();})
-      .then(function(r){ if(!r||!r.ok)throw new Error((r&&r.error)||'Failed to start'); return pollEngine(cgi); })
-      .catch(function(e){ setPhase('');setNum('—');showAlert(e.message||'Measurement failed','danger');restart.style.display='inline-block'; })
-      .then(function(){ busy=false; });
-  }
-  function pollEngine(cgi){
-    return new Promise(function(resolve,reject){
-      var tries=0;
-      var iv=setInterval(function(){
-        if(++tries>240){ clearInterval(iv); reject(new Error('Timed out')); return; }
-        fetch('/cgi-bin/'+cgi+'?action=poll',{cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
-          if(!s) return;
-          if(!s.ok){ clearInterval(iv); reject(new Error(s.error||'Measurement failed')); return; }
-          if(s.ip) $('i-ip4').textContent=s.ip;
-          var loc=s.region||s.isp; if(loc) $('i-reg').textContent=loc;
-          if(s.server) server.innerHTML='Server: <b>'+s.server+'</b>';
-          if(s.stage==='download'){ setPhase('Download'); setNum(+s.download_mbps||0); setArc(logFrac(+s.download_mbps||0)); }
-          else if(s.stage==='upload'){ setPhase('Upload'); setNum(+s.upload_mbps||0); setArc(logFrac(+s.upload_mbps||0)); }
-          else if(s.stage==='ping'){ setPhase('Ping'); }
-          if(s.done){ clearInterval(iv); finish(+s.download_mbps||0, +s.upload_mbps||0, +s.ping_ms||0); resolve(); }
-        }).catch(function(){});
-      }, 400);
-    });
-  }
-  function runDemo(){
-    $('i-ip4').textContent='91.78.21.105'; $('i-reg').textContent='Moscow';
-    server.innerHTML='Server: <b>cloudcdn-mar-70.cdn.yandex.net</b>';
-    var cb=function(s){setNum(s);setArc(logFrac(s));};
-    setPhase('Ping');
-    return delay(500).then(function(){ setPhase('Download'); return demoRamp(86.5,cb); })
-      .then(function(){ setPhase('Upload'); return demoRamp(18.2,cb); })
-      .then(function(){ finish(86.5,18.2,24); })
-      .then(function(){ busy=false; });
-  }
-
-  go.addEventListener('click',run); restart.addEventListener('click',run);
-  loadUserInfo();
-})();
+var timer = null;
+function el(id){ return document.getElementById(id); }
+function showErr(m){ el('err').style.display='block'; el('err').textContent=m; }
+function start(){
+  el('err').style.display='none';
+  el('results').style.display='none';
+  el('go').disabled = true;
+  fetch('/cgi-bin/internetometer.cgi?action=start', {method:'POST', headers:{'X-EE71-Request':'1'}})
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(){ timer = setInterval(poll, 1000); poll(); })
+    .catch(function(e){ el('go').disabled=false; showErr('Не удалось запустить: '+e); });
+}
+function poll(){
+  fetch('/cgi-bin/internetometer.cgi?action=poll')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) { stop(); showErr(d.error); return; }
+      el('status').textContent = d.done ? 'Готово' : ('Измерение: ' + (d.stage||'') + ' ' + (d.progress||0) + '%');
+      if (d.download_mbps) { el('results').style.display='block'; el('dl').textContent = Number(d.download_mbps).toFixed(1); }
+      if (d.upload_mbps)   el('ul').textContent = Number(d.upload_mbps).toFixed(1);
+      if (d.ping_ms)       el('pg').textContent = Number(d.ping_ms).toFixed(0);
+      if (d.ip)            el('ip').textContent = d.ip;
+      if (d.server)        el('srv').textContent = d.server;
+      if (d.region)        el('meta').textContent = d.region;
+      if (d.done) stop(true);
+    })
+    .catch(function(){ /* промежуточный сбой — просто опрашиваем дальше */ });
+}
+function stop(done){
+  clearInterval(timer); timer=null;
+  el('go').disabled=false;
+  if (done) el('status').textContent='Готово';
+}
+el('go').addEventListener('click', start);
 </script>
-</body></html>
+</body>
+</html>
