@@ -37,16 +37,14 @@ run_timeout() {
     return 0
 }
 
-# at_query <команда> — отправить AT, вернуть сырой ответ (без \r)
+# at_query <команда> — отправить AT через microcom. Сырой open()+write()
+# на /dev/smd7 на этом устройстве не работает — порт открывает microcom
+# (ставит termios/скорость), и убирает stale-лок /var/lock/LCK..smd7.
+# -t — общий бюджет времени, -d — выход по простою; формат ответа: echo
+# команды + текст ответа + OK/ERROR.
 at_query() {
-    _out="/tmp/signal_ca_at_$$.out"
-    run_timeout "$AT_READ_TIMEOUT" sh -c '
-        exec 3<>"$1" || exit 1
-        printf "%s\r" "$2" >&3
-        exec cat <&3
-    ' signal_ca_at "$AT_DEV" "$1" > "$_out" 2>/dev/null
-    tr -d '\r' < "$_out" 2>/dev/null | head -30
-    rm -f "$_out"
+    rm -f /var/lock/LCK..smd7
+    echo -e "$1\r" | microcom -d2500 -t1200 "$AT_DEV" 2>/dev/null
 }
 
 # Общая таблица EARFCN→band (36.101), формат как у QCRSRP ($-стиль не нужен,
@@ -93,6 +91,8 @@ awk_table='
     }'
 
 # qcrsrp_parse — PCI,EARFCN,"RSRP" → TSV: type earfcn band rsrp pci
+# Фильтруем мусор: PCI=000 / RSRP>=0 (в ответе всегда есть заполнитель
+# "000,525,000.00" — без него выходит фантомная лишняя ячейка).
 qcrsrp_parse() {
     awk "$awk_table"'
     /\$QCRSRP:/ {
@@ -102,6 +102,7 @@ qcrsrp_parse() {
         for (i = 1; i + 2 <= n; i += 3) {
             pci = f[i]; earfcn = f[i+1]; rsrp = f[i+2]
             if (earfcn == "" || rsrp == "") continue
+            if (pci+0 == 0 || rsrp+0 >= 0) continue
             if (!(earfcn in best) || rsrp+0 > best[earfcn]+0) {
                 best[earfcn] = rsrp
                 pcis[earfcn] = pci

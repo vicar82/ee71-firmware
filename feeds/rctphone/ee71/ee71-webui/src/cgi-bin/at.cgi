@@ -203,17 +203,15 @@ send)
         exit 0
     fi
 
-    # Open, write and read all inside ONE bounded child. Opening the modem
-    # node can itself block when the modem is wedged, so the timeout has to
-    # wrap the open — not just the read.
+    # Open, write and read через microcom: сырой open() на /dev/smd7 на
+    # этом устройстве не работает (порт открывает microcom). -t — общий
+    # бюджет времени, -d — выход по простою. microcom сам убирает
+    # stale-лок /var/lock/LCK..* при наличии флага, но на стоковом busybox
+    # его нет — убираем руками до вызова.
     AT_OUT="/tmp/at_cgi_$$.out"
-    # `exec cat` so the reader IS the process timeout signals — otherwise a
-    # forked cat outlives the bound and keeps the modem node open.
-    run_timeout "$AT_READ_TIMEOUT" sh -c '
-        exec 3<>"$1" || exit 1
-        printf "%s\r" "$2" >&3
-        exec cat <&3
-    ' at_read "$AT_DEV" "$CMD" > "$AT_OUT" 2>/dev/null
+    rm -f /var/lock/LCK..smd7 2>/dev/null
+    echo -e "$CMD\r" | microcom -d"$((AT_READ_TIMEOUT * 1000))" -t"$((AT_READ_TIMEOUT * 1000))" "$AT_DEV" \
+        > "$AT_OUT" 2>/dev/null
     OUTPUT=$(head -c 8192 "$AT_OUT" 2>/dev/null | tr -d '\r' | head -50)
     rm -f "$AT_OUT"
 
