@@ -119,8 +119,12 @@ json_err() {
 #
 # run_timeout <secs> <cmd> [args...]
 # Returns the command's own exit status, except 124 when it was killed on
-# timeout. BusyBox `timeout` exits 143 (128+TERM) / 137 (128+KILL); those
-# are normalised to the GNU 124 convention so callers test one value.
+# timeout.
+#
+# Реализация — чистый шелл (форк + будильник + wait), без апплета timeout:
+# стоковый busybox 1.20.2 роутера имеет timeout лишь в старой форме (-t,
+# без -k), поэтому ветка `timeout -k` оригинала молча ломала вызовы
+# (hostapd_cli и др. не стартовали → пустые списки клиентов/WiFi).
 run_timeout() {
     _rt_secs="$1"
     shift
@@ -128,22 +132,16 @@ run_timeout() {
         echo "[ERR] run_timeout: usage: run_timeout <secs> <cmd> [args...]" >&2
         return 2
     fi
-    if command -v timeout >/dev/null 2>&1; then
-        timeout -k 2 "$_rt_secs" "$@"
-        _rt_rc=$?
-    else
-        # No timeout applet — run unbounded rather than fail the request.
-        # Moot on the main system (BusyBox 1.36.1 has it), but the recovery
-        # partition ships BusyBox 1.20.2 with a different applet set, so
-        # this branch is reachable there: the caller's bound silently
-        # becomes no bound at all. The [ERR] line is the only warning.
-        echo "[ERR] run_timeout: timeout applet missing, running unbounded" >&2
-        "$@"
-        _rt_rc=$?
-    fi
+    ( "$@" ) & _rt_pid=$!
+    ( sleep "$_rt_secs" 2>/dev/null; kill -TERM "$_rt_pid" 2>/dev/null; sleep 2; kill -KILL "$_rt_pid" 2>/dev/null ) & _rt_killer=$!
+    wait "$_rt_pid" 2>/dev/null
+    _rt_rc=$?
+    kill "$_rt_killer" 2>/dev/null
+    wait "$_rt_killer" 2>/dev/null
     case "$_rt_rc" in
         137|143) return 124 ;;
     esac
+    [ "$_rt_rc" -ge 128 ] && return 124
     return "$_rt_rc"
 }
 
