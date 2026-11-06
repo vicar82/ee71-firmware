@@ -295,6 +295,7 @@
                             '<td class="' + cls + '" style="padding:.2rem 0 .2rem .25rem;white-space:nowrap;overflow:hidden">' + (c.rsrp != null ? escHtml(c.rsrp) : '\u2014') + '</td>' +
                             '</tr>';
                     }).join('');
+                    var note = live.length > 2 ? '<div class="text-muted" style="font-size:.65rem;margin-top:.3rem">CA ≤2CC — строки сверх 2 это соседние ячейки, не несущие</div>' : '';
                     bodyEl.innerHTML =
                         '<table class="ca-table" style="width:100%;font-size:.72rem;border-collapse:collapse;table-layout:fixed">' +
                         '<thead><tr style="text-align:left;opacity:.7">' +
@@ -303,7 +304,7 @@
                         '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.earfcn')) + '</th>' +
                         '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.pci')) + '</th>' +
                         '<th style="padding:.15rem 0 .15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.rsrp')) + ', dBm</th>' +
-                        '</tr></thead><tbody>' + rows + '</tbody></table>';
+                        '</tr></thead><tbody>' + rows + '</tbody></table>' + note;
                 }
             } else if (live.length === 1) {
                 if (bandEl) bandEl.textContent = 'LTE B' + live[0].band;
