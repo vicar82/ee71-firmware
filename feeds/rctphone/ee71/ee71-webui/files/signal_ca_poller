@@ -21,7 +21,7 @@ TMP="${CACHE}.$$"
 AT_DEV="/dev/smd7"
 [ ! -c "$AT_DEV" ] && AT_DEV="/dev/smd11"
 AT_READ_TIMEOUT=4
-INTERVAL=5
+INTERVAL=8
 LOCK="/tmp/signal_ca.lock"
 
 log() { echo "signal_ca_poller: $*" >&2; }
@@ -131,7 +131,15 @@ qccainfo_parse() {
 }
 
 once() {
-    # mkdir-lock против гонки с соседним CGI/терминалом
+    # mkdir-lock против гонки с соседним CGI/терминалом. В loop-режиме
+    # лок снимаем в конце каждого прохода (trap EXIT срабатывает лишь
+    # при смерти процесса — без снятия тут поллер отработал бы один раз).
+    if [ -d "$LOCK" ]; then
+        # stale-lock старше 30 секунд (поллер убит посреди once) — воруем
+        _now=$(date +%s 2>/dev/null || echo 0)
+        _lt=$(date -r "$LOCK" +%s 2>/dev/null || echo 0)
+        [ $((_now - _lt)) -gt 30 ] && rm -rf "$LOCK"
+    fi
     if ! mkdir "$LOCK" 2>/dev/null; then
         return 0
     fi
@@ -139,35 +147,39 @@ once() {
 
     : > "$TMP"
     {
-        echo '{"cells":['
-        _first=1
-
         _qc=$(at_query 'AT$QCRSRP?' | qcrsrp_parse)
         _ca=$(at_query 'AT$QCCAINFO?' | qccainfo_parse)
 
-        # Объединяем по EARFCN (предпочитаем строку с RSRP)
-        printf '%s\n%s\n' "$_qc" "$_ca" | awk -F'\t' '
-            NF >= 4 && $1 != "" {
+        # Объединяем по EARFCN (предпочитаем строку с RSRP) и собираем JSON
+        # одним awk — без sort|read-пайплайна (busybox read с IFS в
+        # сабшелле-пайплайна ведёт себя ненадёжно).
+        printf '%s\n%s\n' "$_qc" "$_ca" | awk "$awk_table"'
+            NF >= 2 && $1 != "" {
                 e = $1
                 if (!(e in have) || ($3 != "" && have_r[e] == "")) {
-                    have[e] = 1; have_r[e] = $3
-                    line[e] = $0
+                    have[e] = 1; have_r[e] = $3; have_p[e] = $4
                 }
             }
-            END { for (e in have) print line[e] }
-        ' | sort -t"$(printf '\t')" -k3,3nr -k1,1n | {
-            while IFS="$(printf '\t')" read -r earfcn band rsrp pci; do
-                [ -z "$earfcn" ] && continue
-                [ "$_first" -eq 0 ] && echo ','
-                _first=0
-                _type="scc"
-                [ -z "$_rsrp_seen" ] && { _type="pcc"; _rsrp_seen=1; }
-                printf '{"type":"%s","earfcn":%s,"band":%s,"pci":%s,"rsrp":%s}' \
-                    "$_type" "$earfcn" "${band:-0}" "${pci:-null}" \
-                    "$( [ -n "$rsrp" ] && echo "$rsrp" || echo null )"
-            done
-        }
-        echo '],"bands":[]}'
+            END {
+                n = 0
+                for (e in have) { n++; ef[n] = e }
+                # сортировка по RSRP desc (PCC первым)
+                for (i = 1; i < n; i++)
+                    for (j = i+1; j <= n; j++)
+                        if (have_r[ef[j]]+0 > have_r[ef[i]]+0) {
+                            t = ef[i]; ef[i] = ef[j]; ef[j] = t
+                        }
+                printf "{\"cells\":["
+                for (i = 1; i <= n; i++) {
+                    e = ef[i]
+                    rsrp = have_r[e]; if (rsrp == "") rsrp = "null"
+                    pci = have_p[e];  if (pci == "")  pci = "null"
+                    printf "%s{\"type\":\"%s\",\"earfcn\":%s,\"band\":%s,\"pci\":%s,\"rsrp\":%s}", \
+                        (i > 1 ? "," : ""), (i == 1 ? "pcc" : "scc"), \
+                        e, earfcn_to_band(e), pci, rsrp
+                }
+                printf "],\"bands\":[]}"
+            }'
     } > "$TMP" 2>/dev/null
 
     # bands/ca — добиваем jq'ом поверх готового cells
@@ -176,6 +188,8 @@ once() {
             "$TMP" > "${TMP}.j" && mv "${TMP}.j" "$TMP"
     fi
     mv "$TMP" "$CACHE"
+    rm -rf "$LOCK"
+    trap - EXIT
 }
 
 loop() {
