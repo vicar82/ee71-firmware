@@ -1,7 +1,8 @@
 // esbuild entry point — bundles all JS in correct load order
-// Vendor libraries
-import './uPlot.iife.min.js';
-import './termino.min.js';
+// Vendor libraries (uPlot, termino) are loaded as plain <script> tags in
+// index.html, NOT bundled: both are IIFE scripts that assign a bare
+// `var uPlot = ...` / `var Termino = ...`, which stays module-local inside
+// the esbuild bundle and never reaches window.
 // Core
 import './api.js';
 import './i18n.js';

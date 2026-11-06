@@ -153,10 +153,15 @@
         <div class="mobile-menu-content"></div>
     </div>
 
-    <!-- BUNDLE:JS:BEGIN — replaced by tools/build-www.sh with the hashed bundle.
-         Keep this list identical to js/entry.js, in the same order (the build verifies it). -->
+    <!-- Vendor IIFE libraries: plain script tags on purpose (NOT bundled — a
+         bundled `var uPlot` would be module-local and never reach window).
+         Loaded before the bundle so window.uPlot / window.Termino exist by
+         the time any page code runs. -->
     <script src="js/uPlot.iife.min.js"></script>
     <script src="js/termino.min.js"></script>
+
+    <!-- BUNDLE:JS:BEGIN — replaced by tools/build-www.sh with the hashed bundle.
+         Keep this list identical to js/entry.js, in the same order (the build verifies it). -->
     <script src="js/api.js"></script>
     <script src="js/i18n.js"></script>
     <script src="js/app-core.js"></script>

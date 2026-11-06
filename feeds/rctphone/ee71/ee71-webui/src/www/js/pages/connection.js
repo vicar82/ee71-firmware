@@ -242,14 +242,25 @@
         }
     }
 
+    // Окна zoom-кнопок, секунды. t в /tmp/signal_history.json — uptime роутера,
+    // поэтому фильтруем относительно самой свежей точки, а не Date.now().
+    var ZOOM_WINDOWS = [180, 3600, 10800, 86400];
+
     function _connSignalZoom(level) {
         $$('.zoom-btns .btn-small').forEach(function(b, i) { b.classList.toggle('active', i === level); });
         API.cgiGet('signal.cgi', { action: 'history' }).then(function(hist) {
             if (!Array.isArray(hist) || !hist.length) return;
+            // Последняя точка = "сейчас", остальные сдвигаем тем же оффсетом,
+            // чтобы uptime-секунды стали корректным Unix time для оси.
+            var lastT = 0;
+            hist.forEach(function(pt) { if (pt.t > lastT) lastT = pt.t; });
+            var now = Math.floor(Date.now() / 1000);
+            var offset = now - lastT;
+            var win = ZOOM_WINDOWS[level] || ZOOM_WINDOWS[0];
             _signalHistory = { t: [], rsrp: [], sinr: [] };
             hist.forEach(function(pt) {
-                if (pt.t) {
-                    _signalHistory.t.push(pt.t);
+                if (pt.t && (lastT - pt.t) <= win) {
+                    _signalHistory.t.push(pt.t + offset);
                     _signalHistory.rsrp.push(pt.rsrp || 0);
                     _signalHistory.sinr.push(pt.sinr || 0);
                 }

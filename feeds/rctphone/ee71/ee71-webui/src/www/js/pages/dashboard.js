@@ -288,21 +288,21 @@
                             c.rsrp >= -80 ? 'text-success' :
                             c.rsrp >= -100 ? 'text-warn' : 'text-danger') : '';
                         return '<tr>' +
-                            '<td>' + escHtml(c.type.toUpperCase()) + '</td>' +
-                            '<td>B' + escHtml(c.band) + '</td>' +
-                            '<td>' + escHtml(c.earfcn) + '</td>' +
-                            '<td>' + (c.pci != null ? escHtml(c.pci) : '\u2014') + '</td>' +
-                            '<td class="' + cls + '">' + (c.rsrp != null ? escHtml(c.rsrp) + ' dBm' : '\u2014') + '</td>' +
+                            '<td style="padding:.2rem .25rem .2rem 0;white-space:nowrap;overflow:hidden">' + escHtml(c.type.toUpperCase()) + '</td>' +
+                            '<td style="padding:.2rem .25rem;white-space:nowrap;overflow:hidden">B' + escHtml(c.band) + '</td>' +
+                            '<td style="padding:.2rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(c.earfcn) + '</td>' +
+                            '<td style="padding:.2rem .25rem;white-space:nowrap;overflow:hidden">' + (c.pci != null ? escHtml(c.pci) : '\u2014') + '</td>' +
+                            '<td class="' + cls + '" style="padding:.2rem 0 .2rem .25rem;white-space:nowrap;overflow:hidden">' + (c.rsrp != null ? escHtml(c.rsrp) : '\u2014') + '</td>' +
                             '</tr>';
                     }).join('');
                     bodyEl.innerHTML =
-                        '<table class="ca-table" style="width:100%;font-size:.8rem;border-collapse:collapse">' +
+                        '<table class="ca-table" style="width:100%;font-size:.72rem;border-collapse:collapse;table-layout:fixed">' +
                         '<thead><tr style="text-align:left;opacity:.7">' +
-                        '<th>' + escHtml(t('dash.ca.cell')) + '</th>' +
-                        '<th>' + escHtml(t('dash.ca.band')) + '</th>' +
-                        '<th>' + escHtml(t('dash.ca.earfcn')) + '</th>' +
-                        '<th>' + escHtml(t('dash.ca.pci')) + '</th>' +
-                        '<th>' + escHtml(t('dash.ca.rsrp')) + '</th>' +
+                        '<th style="padding:.15rem .25rem .15rem 0;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.cell')) + '</th>' +
+                        '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.band')) + '</th>' +
+                        '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.earfcn')) + '</th>' +
+                        '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.pci')) + '</th>' +
+                        '<th style="padding:.15rem 0 .15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.rsrp')) + ', dBm</th>' +
                         '</tr></thead><tbody>' + rows + '</tbody></table>';
                 }
             } else if (live.length === 1) {

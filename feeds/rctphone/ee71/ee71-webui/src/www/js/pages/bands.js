@@ -135,11 +135,8 @@
         var mask = _currentMask();
         if (!mask) return;
         var cmd = 'AT$QCBANDPREF=' + _maskToHex(mask);
-        App.confirmDialog({
-            message: t('bands.warn'),
-            danger: true
-        }).then(function(ok) {
-            if (!ok) return;
+        // confirmDialog — колбэковый API: (message, onYes, onNo, opts).
+        App.confirmDialog(t('bands.warn'), function() {
             $('#bands-out').textContent = '> ' + cmd + '\n…';
             API.cgiPost('at.cgi', { action: 'send', cmd: cmd }).then(function(r) {
                 $('#bands-out').textContent = '> ' + cmd + '\n' + ((r && r.output) || '');
@@ -147,7 +144,7 @@
             }).catch(function(e) {
                 $('#bands-out').textContent = '> ' + cmd + '\nERROR: ' + App.errorText(e);
             });
-        });
+        }, null, { danger: true, confirmText: t('bands.lock') });
     }
 
     function _custom() {
