@@ -14,16 +14,18 @@ DESC="EE71 Web UI daemons"
 
 TRAFFIC_BIN=/usr/sbin/traffic_stats
 TRAFFIC_PID=/var/run/traffic_stats.pid
+CA_POLLER=/usr/bin/signal_ca_poller
+CA_PID=/var/run/signal_ca_poller.pid
 
 # Read a PID file, rejecting anything that is not a plain number. A
 # truncated or garbage PID file used to make `kill -0 ""` succeed-ish and
 # `kill ""` fail silently, so the daemon looked running when it was not.
 read_pid() {
-    [ -f "$TRAFFIC_PID" ] || return 1
-    PID="$(cat "$TRAFFIC_PID" 2>/dev/null)"
+    [ -f "$1" ] || return 1
+    PID="$(cat "$1" 2>/dev/null)"
     case "$PID" in
         ''|*[!0-9]*)
-            rm -f "$TRAFFIC_PID"
+            rm -f "$1"
             return 1
             ;;
     esac
@@ -32,16 +34,41 @@ read_pid() {
 
 # Stale PID files are cleaned up here, so callers can trust the answer.
 is_running() {
-    read_pid || return 1
+    _pidfile="$1"
+    read_pid "$_pidfile" || return 1
     if kill -0 "$PID" 2>/dev/null; then
         return 0
     fi
-    rm -f "$TRAFFIC_PID"
+    rm -f "$_pidfile"
     return 1
 }
 
+start_ca_poller() {
+    if is_running "$CA_PID"; then
+        echo "$NAME: signal_ca_poller already running (pid $PID)"
+        return 0
+    fi
+    if [ ! -x "$CA_POLLER" ]; then
+        echo "$NAME: signal_ca_poller not found"
+        return 1
+    fi
+    # Демон пишет кэш /tmp/signal_ca.json раз в 5 секунд
+    start-stop-daemon -S -b -m -p "$CA_PID" -x "$CA_POLLER" -- loop
+    echo "$NAME: signal_ca_poller started"
+}
+
+stop_ca_poller() {
+    if is_running "$CA_PID"; then
+        kill "$PID" 2>/dev/null
+        rm -f "$CA_PID"
+        echo "$NAME: signal_ca_poller stopped"
+    else
+        rm -f "$CA_PID"
+    fi
+}
+
 start_traffic() {
-    if is_running; then
+    if is_running "$TRAFFIC_PID"; then
         echo "$NAME: traffic_stats already running (pid $PID)"
         return 0
     fi
@@ -66,7 +93,7 @@ start_traffic() {
 }
 
 stop_traffic() {
-    if is_running; then
+    if is_running "$TRAFFIC_PID"; then
         kill "$PID" 2>/dev/null
         rm -f "$TRAFFIC_PID"
         echo "$NAME: traffic_stats stopped"
@@ -81,9 +108,11 @@ case "$1" in
     start)
         echo "Starting $DESC..."
         start_traffic
+        start_ca_poller
         ;;
     stop)
         echo "Stopping $DESC..."
+        stop_ca_poller
         stop_traffic
         ;;
     restart)
@@ -92,12 +121,20 @@ case "$1" in
         $0 start
         ;;
     status)
-        if is_running; then
+        _rc=0
+        if is_running "$TRAFFIC_PID"; then
             echo "traffic_stats: running (pid $PID)"
         else
             echo "traffic_stats: stopped"
-            exit 3
+            _rc=3
         fi
+        if is_running "$CA_PID"; then
+            echo "signal_ca_poller: running (pid $PID)"
+        else
+            echo "signal_ca_poller: stopped"
+            _rc=3
+        fi
+        exit "$_rc"
         ;;
     *)
         echo "Usage: $0 {start|stop|restart|status}"

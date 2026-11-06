@@ -4,6 +4,7 @@ import './uPlot.iife.min.js';
 import './termino.min.js';
 // Core
 import './api.js';
+import './i18n.js';
 import './app-core.js';
 // Pages (order doesn't matter — each registers via App.registerPage)
 import './pages/login.js';
@@ -18,6 +19,8 @@ import './pages/firewall.js';
 import './pages/upnp.js';
 import './pages/ttl-fix.js';
 import './pages/sms.js';
+import './pages/ussd.js';
+import './pages/bands.js';
 import './pages/vpn.js';
 import './pages/diagnostics.js';
 import './pages/speedtest.js';

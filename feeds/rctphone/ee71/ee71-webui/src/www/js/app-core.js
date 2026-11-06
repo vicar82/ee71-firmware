@@ -15,6 +15,10 @@ var App = (function() {
     function $(sel, ctx) { return (ctx || document).querySelector(sel); }
     function $$(sel, ctx) { return (ctx || document).querySelectorAll(sel); }
 
+    // Локализация: i18n.js грузится до app-core в dev, после — в бандле всё
+    // равно инициализировано к моменту рендера. Fallback — ключ.
+    function t(key) { return (window.I18n && window.I18n.t) ? window.I18n.t(key) : key; }
+
     function h(tag, attrs) {
         var el = document.createElement(tag);
         if (attrs) {
@@ -508,6 +512,8 @@ var App = (function() {
         { id: 'at-terminal',  icon: 'ic-terminal',   label: 'AT Terminal' },
         { id: 'mobile-settings', icon: 'ic-settings', label: 'Settings' },
         { id: 'sms',          icon: 'ic-sms',        label: 'SMS' },
+        { id: 'ussd',         icon: 'ic-sms',        label: 'USSD' },
+        { id: 'bands',        icon: 'ic-globe',      label: 'Bands' },
         { id: 'wifi',         icon: 'ic-wifi',       label: 'WiFi' },
 
         { id: 'lan',          icon: 'ic-network',    label: 'LAN' },
@@ -525,8 +531,8 @@ var App = (function() {
 
     var NAV_GROUPS = [
         { label: 'STATUS',   icon: 'ic-dashboard', items: ['dashboard', 'clients'] },
-        { label: 'MOBILE',   icon: 'ic-mobile',    items: ['connection', 'sms', 'mobile-settings'] },
-        { label: 'NETWORK',  icon: 'ic-wifi',      items: ['wifi', 'lan', 'firewall', 'upnp', 'ttl-fix', 'vpn'] },
+        { label: 'MOBILE',   icon: 'ic-mobile',    items: ['connection', 'sms', 'ussd', 'mobile-settings', 'bands'] },
+        { label: 'NETWORK',  icon: 'ic-wifi',      items: ['wifi', 'lan', 'firewall', 'upnp', 'ttl-fix'] },
         { label: 'SYSTEM',   icon: 'ic-settings',  items: ['diagnostics', 'speedtest', 'settings', 'ssh', 'backup', 'about'] },
     ];
 
@@ -854,7 +860,7 @@ var App = (function() {
             NAV_GROUPS.forEach(function(group, gi) {
                 // Group header (icon + label)
                 var header = h('div', { class: 'nav-group-header', html:
-                    icon(group.icon) + '<span class="nav-group-label">' + group.label + '</span>'
+                    icon(group.icon) + '<span class="nav-group-label">' + escHtml(t('nav.' + group.label.toLowerCase())) + '</span>'
                 });
                 header.setAttribute('data-group', gi);
                 header.addEventListener('click', function() {
@@ -877,7 +883,7 @@ var App = (function() {
                     var link = h('a', {
                         href: '#/' + item.id,
                         'data-page': item.id,
-                        html: icon(item.icon) + '<span class="nav-item-label">' + item.label + '</span>'
+                        html: icon(item.icon) + '<span class="nav-item-label">' + escHtml(t('nav.' + item.id)) + '</span>'
                     });
                     subDiv.appendChild(link);
                 });
@@ -903,6 +909,18 @@ var App = (function() {
             });
             sidebar.appendChild(toggleBtn);
 
+            var langBtn = h('a', {
+                href: '#',
+                class: 'nav-lang-toggle',
+                html: '<span class="nav-item-label">' + (I18n.locale() === 'ru' ? 'EN' : 'RU') + '</span>'
+            });
+            langBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                I18n.toggle();
+                location.reload();
+            });
+            sidebar.appendChild(langBtn);
+
             var sideLogout = h('a', {
                 href: '#',
                 class: 'nav-logout',
@@ -921,7 +939,7 @@ var App = (function() {
                 var bottomLink = h('a', {
                     href: '#/' + item.id,
                     'data-page': item.id,
-                    html: icon(item.icon) + '<span>' + item.label + '</span>'
+                    html: icon(item.icon) + '<span>' + escHtml(t('nav.' + item.id)) + '</span>'
                 });
                 if (bottomScroll) bottomScroll.appendChild(bottomLink);
             }
@@ -942,7 +960,7 @@ var App = (function() {
                 var menuLink = h('a', {
                     href: '#/' + item.id,
                     'data-page': item.id,
-                    html: icon(item.icon) + '<span>' + item.label + '</span>'
+                    html: icon(item.icon) + '<span>' + escHtml(t('nav.' + item.id)) + '</span>'
                 });
                 menuLink.addEventListener('click', _toggleMobileMenu);
                 container.appendChild(menuLink);
@@ -950,7 +968,7 @@ var App = (function() {
 
             NAV_GROUPS.forEach(function(group) {
                 var groupLabel = h('div', { class: 'nav-group-label', html:
-                    icon(group.icon) + group.label
+                    icon(group.icon) + escHtml(t('nav.' + group.label.toLowerCase()))
                 });
                 menuContent.appendChild(groupLabel);
 
@@ -961,6 +979,18 @@ var App = (function() {
 
             // Bottom actions: theme toggle + logout
             var bottomActions = h('div', { class: 'mobile-menu-bottom' });
+
+            var langLink = h('a', {
+                href: '#',
+                html: icon('ic-globe') + '<span>' + (I18n.locale() === 'ru' ? 'Switch to English' : 'Переключить на русский') + '</span>'
+            });
+            langLink.className = 'mobile-menu-action';
+            langLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                I18n.toggle();
+                location.reload();
+            });
+            bottomActions.appendChild(langLink);
 
             var themeLink = h('a', {
                 href: '#',

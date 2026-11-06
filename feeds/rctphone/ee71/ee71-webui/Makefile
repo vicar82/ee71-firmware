@@ -127,6 +127,8 @@ define Package/ee71-webui/install
 	# Shared CGI library (sourced by every *.cgi)
 	$(INSTALL_DIR) $(1)/jrd-resource/resource/webrc/www/cgi-bin/lib
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/cgi-bin/lib/cgi-common.sh $(1)/jrd-resource/resource/webrc/www/cgi-bin/lib/cgi-common.sh
+	# CA cache daemon (background AT poller for signal.cgi?action=ca)
+	$(INSTALL_BIN) ./files/signal_ca_poller $(1)/usr/bin/signal_ca_poller
 	# Init script
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/ee71_webui.init $(1)/etc/init.d/ee71_webui

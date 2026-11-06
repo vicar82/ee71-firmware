@@ -1,6 +1,6 @@
 ;(function() {
     'use strict';
-    var $ = App.$, $$ = App.$$, icon = App.icon, escHtml = App.escHtml, actionAttr = App.actionAttr;
+    var $ = App.$, $$ = App.$$, icon = App.icon, escHtml = App.escHtml, actionAttr = App.actionAttr, t = App.t;
 
     var _atTerm = null;
     var _atTemplates = null;
@@ -11,6 +11,13 @@
                 '<div class="at-toolbar">' +
                     '<span class="at-toolbar-title">' + icon('ic-terminal') + ' AT Terminal</span>' +
                     '<button class="btn-icon" ' + actionAttr('atClear') + ' title="Clear output">' + icon('ic-delete') + '</button>' +
+                '</div>' +
+                '<div class="at-quick" style="display:flex;gap:.4rem;flex-wrap:wrap;padding:.5rem .75rem;border-bottom:1px solid var(--border-color,rgba(128,128,128,.2))">' +
+                    _quickBtn('at.quick.signal', 'AT$QCSQ') +
+                    _quickBtn('at.quick.cells', 'AT$QCRSRP?') +
+                    _quickBtn('at.quick.ca', 'AT$QCCAINFO?') +
+                    _quickBtn('at.quick.bands', 'AT$QCBANDPREF?') +
+                    _quickBtn('at.quick.reg', 'AT+CEREG?') +
                 '</div>' +
                 '<div id="at-terminal" class="at-terminal">' +
                     '<pre><code class="termino-console"></code></pre>' +
@@ -132,6 +139,19 @@
         }
     }
 
+    function _quickBtn(labelKey, cmd) {
+        return '<button class="btn-outline" style="padding:.25rem .6rem;font-size:.75rem" ' +
+            'data-action="atQuick" data-args="[' + escHtml(JSON.stringify(cmd)) + ']">' +
+            escHtml(t(labelKey)) + '</button>';
+    }
+
+    function _atQuick(cmd) {
+        var termInput = document.querySelector('#at-terminal .termino-input');
+        if (!termInput) return;
+        termInput.value = cmd;
+        _atSend();
+    }
+
     function _atSend() {
         var termInput = document.querySelector('#at-terminal .termino-input');
         if (!termInput || !termInput.value.trim()) return;
@@ -147,4 +167,5 @@
     App._atClear = _atClear;
     App._atSend = _atSend;
     App._atDropdown = _atDropdown;
+    App._atQuick = _atQuick;
 })();

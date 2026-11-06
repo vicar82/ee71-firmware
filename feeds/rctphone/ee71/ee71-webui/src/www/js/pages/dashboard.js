@@ -1,10 +1,11 @@
 ;(function() {
     'use strict';
-    var $ = App.$, icon = App.icon, escHtml = App.escHtml, actionAttr = App.actionAttr;
+    var $ = App.$, icon = App.icon, escHtml = App.escHtml, actionAttr = App.actionAttr, t = App.t;
     var formatBytes = App.formatBytes, formatSpeed = App.formatSpeed, formatSpeedPair = App.formatSpeedPair, formatUptime = App.formatUptime;
 
     var _dashTimer = null;
     var _miniChart = null;
+    var _sigChart = null;
     var _speedHistory = { t: [], dl: [], ul: [] };
 
     function renderDashboard(container) {
@@ -13,14 +14,22 @@
         container.innerHTML =
             '<div class="cards-grid">' +
                 '<div class="card" id="dash-connection">' +
-                    '<h3>' + icon('ic-mobile') + ' Connection <span class="status-dot" id="d-conn-dot"></span></h3>' +
-                    '<div class="stat-row"><span class="label">Operator</span><span class="value" id="d-operator">\u2014</span></div>' +
-                    '<div class="stat-row"><span class="label">Technology</span><span class="value" id="d-tech">\u2014</span></div>' +
-                    '<div class="stat-row"><span class="label">Signal (RSRP)</span><span class="value" id="d-rsrp">\u2014</span></div>' +
-                    '<div class="stat-row"><span class="label">Band</span><span class="value" id="d-band">\u2014</span></div>' +
+                    '<h3>' + icon('ic-mobile') + ' ' + escHtml(t('dash.connection')) + ' <span class="status-dot" id="d-conn-dot"></span></h3>' +
+                    '<div class="stat-row"><span class="label">' + escHtml(t('dash.operator')) + '</span><span class="value" id="d-operator">\u2014</span></div>' +
+                    '<div class="stat-row"><span class="label">' + escHtml(t('dash.technology')) + '</span><span class="value" id="d-tech">\u2014</span></div>' +
+                    '<div class="stat-row"><span class="label">' + escHtml(t('dash.signal')) + ' (RSRP)</span><span class="value" id="d-rsrp">\u2014</span></div>' +
+                    '<div class="stat-row"><span class="label">' + escHtml(t('dash.band')) + '</span><span class="value" id="d-band">\u2014</span></div>' +
                     '<div class="stat-row" style="border-bottom:none;padding-bottom:2px"><span class="label">Public IP Address</span></div>' +
                     '<div class="stat-row"><span class="label">IPv4</span><span class="value text-mono" id="d-ip">\u2014</span></div>' +
                     '<div class="stat-row" id="d-ip6-row" style="display:none"><span class="label">IPv6</span><span class="value text-mono" id="d-ip6" style="font-size:0.65rem">\u2014</span></div>' +
+                '</div>' +
+                '<div class="card" id="dash-ca">' +
+                    '<h3>' + icon('ic-globe') + ' ' + escHtml(t('dash.ca.title')) + '</h3>' +
+                    '<div id="d-ca-body"><span class="text-muted">\u2014</span></div>' +
+                '</div>' +
+                '<div class="card" id="dash-signal">' +
+                    '<h3>' + icon('ic-diag') + ' ' + escHtml(t('dash.sig-history')) + '</h3>' +
+                    '<div class="chart-container" id="d-sig-chart" style="min-height:110px"></div>' +
                 '</div>' +
                 '<div class="card" id="dash-speed">' +
                     '<h3>' + icon('ic-traffic') + ' Speed</h3>' +
@@ -39,12 +48,12 @@
                     '<div class="chart-container" id="d-speed-chart" style="min-height:120px"></div>' +
                 '</div>' +
                 '<div class="card" id="dash-devices">' +
-                    '<h3>' + icon('ic-clients') + ' Devices</h3>' +
+                    '<h3>' + icon('ic-clients') + ' ' + escHtml(t('dash.clients')) + '</h3>' +
                     '<div class="stat-row"><span class="label">Connected</span><span class="value" id="d-devcount">\u2014</span></div>' +
                     '<div id="d-devlist" class="mt-1 text-small"></div>' +
                 '</div>' +
                 '<div class="card" id="dash-usage">' +
-                    '<h3>' + icon('ic-traffic') + ' Data Usage</h3>' +
+                    '<h3>' + icon('ic-traffic') + ' ' + escHtml(t('dash.traffic')) + '</h3>' +
                     '<div class="stat-row">' +
                         '<span class="label">Total</span><span class="value" id="d-usage-total">\u2014</span>' +
                     '</div>' +
@@ -57,7 +66,7 @@
                 '</div>' +
                 '<div class="card" id="dash-system">' +
                     '<h3>' + icon('ic-settings') + ' System</h3>' +
-                    '<div class="stat-row"><span class="label">Uptime</span><span class="value" id="d-uptime">\u2014</span></div>' +
+                    '<div class="stat-row"><span class="label">' + escHtml(t('dash.uptime')) + '</span><span class="value" id="d-uptime">\u2014</span></div>' +
                     '<div class="stat-row">' +
                         '<span class="label">Battery</span>' +
                         '<span class="value" id="d-battery">\u2014</span>' +
@@ -82,20 +91,21 @@
                             '<span class="switch-row-label">' + icon('ic-globe') + ' Data</span>' +
                             '<label class="switch"><input type="checkbox" id="t-data" ' + actionAttr('toggleData') + '><span class="slider"></span></label>' +
                         '</div>' +
-                        '<div class="switch-row">' +
-                            '<span class="switch-row-label">' + icon('ic-vpn') + ' VPN</span>' +
-                            '<label class="switch"><input type="checkbox" id="t-vpn" ' + actionAttr('toggleVpn') + '><span class="slider"></span></label>' +
-                        '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>';
 
         refreshDashboard();
-        _dashTimer = setInterval(refreshDashboard, 5000);
+        _updateSignalChart();
+        _dashTimer = setInterval(function() {
+            refreshDashboard();
+            _updateSignalChart();
+        }, 5000);
 
         App.setCleanup(function() {
             if (_dashTimer) { clearInterval(_dashTimer); _dashTimer = null; }
             if (_miniChart) { _miniChart.destroy(); _miniChart = null; }
+            if (_sigChart) { _sigChart.destroy(); _sigChart = null; }
             _speedHistory = { t: [], dl: [], ul: [] };
         });
     }
@@ -134,21 +144,7 @@
                     }
                 }
                 // Band — use CA data if available, fallback to GetNetworkInfo
-                API.cgiGet('signal.cgi', { action: 'ca' }).then(function(ca) {
-                    if (!el('d-band')) return;
-                    if (ca && ca.ca && ca.bands && ca.bands.length > 1) {
-                        el('d-band').textContent = ca.bands.map(function(b) { return 'B' + b; }).join('+');
-                        el('d-band').title = ca.cells.map(function(c) {
-                            return c.type.toUpperCase() + ': LTE B' + c.band + ' (EARFCN ' + c.earfcn + ', ' + (c.rsrp != null ? c.rsrp + ' dBm' : '') + ')';
-                        }).join('\n');
-                    } else if (ca && ca.bands && ca.bands.length === 1) {
-                        el('d-band').textContent = 'LTE B' + ca.bands[0];
-                    } else {
-                        el('d-band').textContent = App.formatBand(netInfo.Band) || '\u2014';
-                    }
-                }).catch(function() {
-                    if (el('d-band')) el('d-band').textContent = App.formatBand(netInfo.Band) || '\u2014';
-                });
+                _updateCaCard(netInfo);
 
                 // Connection status dot
                 var dot = el('d-conn-dot');
@@ -266,20 +262,91 @@
                 tData.checked = (connSt.ConnectionStatus === 2 || connSt.ConnectionStatus === '2');
             }
 
-            // VPN toggle state
-            Promise.all([
-                API.cgiGet('wireguard.cgi', { action: 'status' }).catch(function() { return {}; }),
-                API.cgiGet('shadowsocks.cgi', { action: 'status' }).catch(function() { return {}; }),
-            ]).then(function(vpnRes) {
-                var tVpn = el('t-vpn');
-                if (tVpn) tVpn.checked = !!(vpnRes[0].up || vpnRes[1].running);
-            }).catch(function() {});
-
             // Mini speed chart
             _updateMiniChart(trafficData);
         }).catch(function() {
             // Dashboard refresh failed
         });
+    }
+
+    // CA-карточка: краткая строка в сводке + таблица компонентных несущих.
+    // Данные — из кэша signal_ca_poller (мгновенно); при недоступности —
+    // fallback на GetNetworkInfo.Band.
+    function _updateCaCard(netInfo) {
+        API.cgiGet('signal.cgi', { action: 'ca' }).then(function(ca) {
+            var bandEl = document.getElementById('d-band');
+            var bodyEl = document.getElementById('d-ca-body');
+            var cells = (ca && ca.cells) || [];
+            var live = cells.filter(function(c) { return c.band > 0; });
+
+            if (live.length > 1) {
+                var bands = live.map(function(c) { return 'B' + c.band; });
+                if (bandEl) bandEl.textContent = bands.join('+');
+                if (bodyEl) {
+                    var rows = live.map(function(c) {
+                        var cls = c.rsrp != null ? (
+                            c.rsrp >= -80 ? 'text-success' :
+                            c.rsrp >= -100 ? 'text-warn' : 'text-danger') : '';
+                        return '<tr>' +
+                            '<td>' + escHtml(c.type.toUpperCase()) + '</td>' +
+                            '<td>B' + escHtml(c.band) + '</td>' +
+                            '<td>' + escHtml(c.earfcn) + '</td>' +
+                            '<td>' + (c.pci != null ? escHtml(c.pci) : '\u2014') + '</td>' +
+                            '<td class="' + cls + '">' + (c.rsrp != null ? escHtml(c.rsrp) + ' dBm' : '\u2014') + '</td>' +
+                            '</tr>';
+                    }).join('');
+                    bodyEl.innerHTML =
+                        '<table class="ca-table" style="width:100%;font-size:.8rem;border-collapse:collapse">' +
+                        '<thead><tr style="text-align:left;opacity:.7">' +
+                        '<th>' + escHtml(t('dash.ca.cell')) + '</th>' +
+                        '<th>' + escHtml(t('dash.ca.band')) + '</th>' +
+                        '<th>' + escHtml(t('dash.ca.earfcn')) + '</th>' +
+                        '<th>' + escHtml(t('dash.ca.pci')) + '</th>' +
+                        '<th>' + escHtml(t('dash.ca.rsrp')) + '</th>' +
+                        '</tr></thead><tbody>' + rows + '</tbody></table>';
+                }
+            } else if (live.length === 1) {
+                if (bandEl) bandEl.textContent = 'LTE B' + live[0].band;
+                if (bodyEl) bodyEl.innerHTML = '<span class="text-muted">' + escHtml(t('dash.ca.none')) + '</span>';
+            } else {
+                if (bandEl) bandEl.textContent = App.formatBand(netInfo.Band) || '\u2014';
+                if (bodyEl) bodyEl.innerHTML = '<span class="text-muted">' + escHtml(t('dash.ca.none')) + '</span>';
+            }
+        }).catch(function() {
+            var bandEl = document.getElementById('d-band');
+            if (bandEl) bandEl.textContent = App.formatBand(netInfo.Band) || '\u2014';
+        });
+    }
+
+    // История RSRP/SINR из /tmp/signal_history.json (traffic_stats, 64 точки)
+    function _updateSignalChart() {
+        API.cgiGet('signal.cgi', { action: 'history' }).then(function(hist) {
+            var chartEl = document.getElementById('d-sig-chart');
+            if (!chartEl || !Array.isArray(hist) || hist.length < 2) return;
+
+            var xs = hist.map(function(p) { return p.t; });
+            var rsrp = hist.map(function(p) { return p.rsrp; });
+            var sinr = hist.map(function(p) { return p.sinr; });
+
+            var data = [xs, rsrp, sinr];
+            if (_sigChart) {
+                _sigChart.setData(data);
+            } else {
+                _sigChart = new uPlot({
+                    width: chartEl.clientWidth || 300,
+                    height: 110,
+                    cursor: { show: false },
+                    legend: { show: false },
+                    scales: { x: { time: false } },
+                    axes: [{ show: false }, { show: false }],
+                    series: [
+                        {},
+                        { stroke: '#0077cc', fill: 'rgba(0,119,204,0.12)', width: 1.5 },
+                        { stroke: '#e6a23c', width: 1.5 },
+                    ],
+                }, data, chartEl);
+            }
+        }).catch(function() {});
     }
 
     function _toggleWifi() {
@@ -297,19 +364,6 @@
             return API.webapi(connected ? 'DisConnect' : 'Connect');
         }).then(function() {
             setTimeout(refreshDashboard, 2000);
-        }).catch(function() {});
-    }
-
-    function _toggleVpn() {
-        API.cgiGet('wireguard.cgi', { action: 'status' }).then(function(wg) {
-            if (wg.up) return API.cgiPost('wireguard.cgi', { action: 'disable' });
-            return API.cgiGet('shadowsocks.cgi', { action: 'status' }).then(function(ss) {
-                if (ss.running) return API.cgiPost('shadowsocks.cgi', { action: 'disable' });
-                if (wg.has_config) return API.cgiPost('wireguard.cgi', { action: 'enable' });
-                App.navigate('vpn');
-            });
-        }).then(function() {
-            setTimeout(refreshDashboard, 1500);
         }).catch(function() {});
     }
 
@@ -354,5 +408,4 @@
     App.refreshDashboard = refreshDashboard;
     App._toggleWifi = _toggleWifi;
     App._toggleData = _toggleData;
-    App._toggleVpn = _toggleVpn;
 })();
