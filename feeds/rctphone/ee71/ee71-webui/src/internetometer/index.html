@@ -4,25 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Интернетометр</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { margin:0; padding:24px 16px; font-family:-apple-system,system-ui,sans-serif;
-         background:#fff; color:#161617; display:flex; flex-direction:column; align-items:center; }
-  @media (prefers-color-scheme: dark) { body { background:#161617; color:#fff; } }
-  h2 { margin:0 0 18px; font-size:20px; }
-  #go { font-size:20px; font-weight:600; color:#161617; background:#fc0; border:0;
-        border-radius:26px; padding:14px 44px; cursor:pointer; }
-  #go:disabled { opacity:.5; cursor:default; }
-  #status { margin-top:16px; font-size:14px; opacity:.75; min-height:1.4em; }
-  #results { margin-top:20px; width:100%; max-width:420px; display:none; }
-  .row { display:flex; justify-content:space-between; padding:12px 4px;
-         border-top:1px solid rgba(128,128,128,.25); font-size:16px; }
-  .row .v { font-weight:700; font-variant-numeric:tabular-nums; }
-  .big { font-size:30px; font-weight:700; text-align:center; margin:8px 0 4px; font-variant-numeric:tabular-nums; }
-  .lbl { text-align:center; font-size:12px; opacity:.6; text-transform:uppercase; letter-spacing:.5px; }
-  #err { color:#d33; margin-top:14px; max-width:420px; display:none; font-size:14px; }
-  #meta { margin-top:16px; font-size:12px; opacity:.55; text-align:center; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <h2>Интернетометр</h2>
@@ -38,41 +20,6 @@
   <div class="row"><span>Сервер</span><span class="v" id="srv" style="font-weight:400">—</span></div>
 </div>
 <div id="meta"></div>
-<script>
-var timer = null;
-function el(id){ return document.getElementById(id); }
-function showErr(m){ el('err').style.display='block'; el('err').textContent=m; }
-function start(){
-  el('err').style.display='none';
-  el('results').style.display='none';
-  el('go').disabled = true;
-  fetch('/cgi-bin/internetometer.cgi?action=start', {method:'POST', headers:{'X-EE71-Request':'1'}})
-    .then(function(r){ return r.json().catch(function(){ return {}; }); })
-    .then(function(){ timer = setInterval(poll, 1000); poll(); })
-    .catch(function(e){ el('go').disabled=false; showErr('Не удалось запустить: '+e); });
-}
-function poll(){
-  fetch('/cgi-bin/internetometer.cgi?action=poll')
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d.error) { stop(); showErr(d.error); return; }
-      el('status').textContent = d.done ? 'Готово' : ('Измерение: ' + (d.stage||'') + ' ' + (d.progress||0) + '%');
-      if (d.download_mbps) { el('results').style.display='block'; el('dl').textContent = Number(d.download_mbps).toFixed(1); }
-      if (d.upload_mbps)   el('ul').textContent = Number(d.upload_mbps).toFixed(1);
-      if (d.ping_ms)       el('pg').textContent = Number(d.ping_ms).toFixed(0);
-      if (d.ip)            el('ip').textContent = d.ip;
-      if (d.server)        el('srv').textContent = d.server;
-      if (d.region)        el('meta').textContent = d.region;
-      if (d.done) stop(true);
-    })
-    .catch(function(){ /* промежуточный сбой — просто опрашиваем дальше */ });
-}
-function stop(done){
-  clearInterval(timer); timer=null;
-  el('go').disabled=false;
-  if (done) el('status').textContent='Готово';
-}
-el('go').addEventListener('click', start);
-</script>
+<script src="app.js"></script>
 </body>
 </html>

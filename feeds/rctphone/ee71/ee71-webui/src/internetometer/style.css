@@ -1,0 +1,18 @@
+
+  :root { color-scheme: light dark; }
+  body { margin:0; padding:24px 16px; font-family:-apple-system,system-ui,sans-serif;
+         background:#fff; color:#161617; display:flex; flex-direction:column; align-items:center; }
+  @media (prefers-color-scheme: dark) { body { background:#161617; color:#fff; } }
+  h2 { margin:0 0 18px; font-size:20px; }
+  #go { font-size:20px; font-weight:600; color:#161617; background:#fc0; border:0;
+        border-radius:26px; padding:14px 44px; cursor:pointer; }
+  #go:disabled { opacity:.5; cursor:default; }
+  #status { margin-top:16px; font-size:14px; opacity:.75; min-height:1.4em; }
+  #results { margin-top:20px; width:100%; max-width:420px; display:none; }
+  .row { display:flex; justify-content:space-between; padding:12px 4px;
+         border-top:1px solid rgba(128,128,128,.25); font-size:16px; }
+  .row .v { font-weight:700; font-variant-numeric:tabular-nums; }
+  .big { font-size:30px; font-weight:700; text-align:center; margin:8px 0 4px; font-variant-numeric:tabular-nums; }
+  .lbl { text-align:center; font-size:12px; opacity:.6; text-transform:uppercase; letter-spacing:.5px; }
+  #err { color:#d33; margin-top:14px; max-width:420px; display:none; font-size:14px; }
+  #meta { margin-top:16px; font-size:12px; opacity:.55; text-align:center; }
