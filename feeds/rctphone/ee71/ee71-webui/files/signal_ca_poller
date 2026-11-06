@@ -40,11 +40,11 @@ run_timeout() {
 # at_query <команда> — отправить AT через microcom. Сырой open()+write()
 # на /dev/smd7 на этом устройстве не работает — порт открывает microcom
 # (ставит termios/скорость), и убирает stale-лок /var/lock/LCK..smd7.
-# -t — общий бюджет времени, -d — выход по простою; формат ответа: echo
-# команды + текст ответа + OK/ERROR.
+# Окна generous (-t3000/-d4000): после ребута модем отвечает медленнее,
+# короткое окно обрезает ответ до мусора.
 at_query() {
     rm -f /var/lock/LCK..smd7
-    echo -e "$1\r" | microcom -d2500 -t1200 "$AT_DEV" 2>/dev/null
+    echo -e "$1\r" | microcom -d4000 -t3000 "$AT_DEV" 2>/dev/null
 }
 
 # Общая таблица EARFCN→band (36.101), формат как у QCRSRP ($-стиль не нужен,
@@ -148,7 +148,9 @@ once() {
     : > "$TMP"
     {
         _qc=$(at_query 'AT$QCRSRP?' | qcrsrp_parse)
-        _ca=$(at_query 'AT$QCCAINFO?' | qccainfo_parse)
+        # $QCCAINFO на этом модеме нет (ERROR) — опрашивать нечего, но
+        # merge-логику оставляем на случай других билдов.
+        _ca=""
 
         # Объединяем по EARFCN (предпочитаем строку с RSRP) и собираем JSON
         # одним awk — без sort|read-пайплайна (busybox read с IFS в
@@ -181,6 +183,21 @@ once() {
                 printf "],\"bands\":[]}"
             }'
     } > "$TMP" 2>/dev/null
+
+    # защита от мигания: пустой/мусорный тик не затирает непустой кэш
+    # моложе 60 секунд (иначе дашборд мигал бы "агрегация → нет" на каждом
+    # обрезанном ответе)
+    if ! grep -q '"cells":\[{' "$TMP" 2>/dev/null; then
+        if grep -q '"cells":\[{' "$CACHE" 2>/dev/null; then
+            _om=$(stat -c %Y "$CACHE" 2>/dev/null || echo 0)
+            _nw=$(date +%s 2>/dev/null || echo 0)
+            if [ $((_nw - _om)) -lt 60 ]; then
+                rm -rf "$LOCK"
+                trap - EXIT
+                return 0
+            fi
+        fi
+    fi
 
     # bands/ca — добиваем jq'ом поверх готового cells
     if command -v jq >/dev/null 2>&1; then
