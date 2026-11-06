@@ -1442,10 +1442,26 @@ input[type="submit"]:hover {
     display: inline-flex; align-items: center; justify-content: center;
     border: 1px solid transparent; border-radius: 50%;
     background: transparent; color: var(--text-tertiary);
-    opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+    opacity: 0.45; transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
     padding: 0; margin-left: 2px; cursor: pointer;
 }
 .chat-msg-del svg { width: 13px; height: 13px; fill: currentColor; display: block; }
+
+.chat-header-del {
+    margin-left: auto;
+    width: 34px; height: 34px; min-width: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border-color); border-radius: 50%;
+    background: transparent; color: var(--text-secondary);
+    cursor: pointer; padding: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.chat-header-del svg { width: 16px; height: 16px; fill: currentColor; }
+.chat-header-del:hover, .chat-header-del:focus-visible {
+    background: color-mix(in srgb, var(--color-danger) 14%, var(--bg-surface));
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
 .chat-msg:hover .chat-msg-del, .chat-msg-del:focus-visible { opacity: 1; }
 .chat-msg-del:hover, .chat-msg-del:focus-visible {
     background: color-mix(in srgb, var(--color-danger) 10%, transparent);

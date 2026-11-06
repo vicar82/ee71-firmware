@@ -273,12 +273,18 @@
 
     function _renderSmsThread(el, phone, contactId, list) {
             var letter = _avatarLetters(phone);
+            var threadIds = list.map(function(m) { return m.SMSId || m.SmsId; }).filter(Boolean);
 
             var html = '<div class="chat-wrap">' +
             '<div class="chat-header">' +
                 '<button ' + actionAttr('smsTab', ['inbox']) + ' class="chat-back">\u2190</button>' +
                 '<div class="chat-avatar sm">' + escHtml(letter) + '</div>' +
                 '<span class="chat-header-name">' + escHtml(phone) + '</span>' +
+                '<button type="button" class="chat-header-del" title="Delete conversation" ' +
+                    'aria-label="Delete conversation" ' +
+                    actionAttr('deleteSmsThread', [contactId || 0, phone, threadIds]) + '>' +
+                    icon('ic-delete') +
+                '</button>' +
             '</div>';
 
             if (list.length === 0) {
