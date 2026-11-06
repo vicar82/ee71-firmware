@@ -40,7 +40,7 @@
         var installed = _status && _status[e.sk];
         if (installed) {
             box.innerHTML = '<iframe id="st-frame" title="Speed Test" ' +
-                'style="width:100%;height:680px;border:0;border-radius:12px;display:block" src="' + _frameSrc() + '"></iframe>';
+                'style="width:100%;height:min(860px,calc(100vh - 150px));min-height:560px;border:0;border-radius:12px;display:block" src="' + _frameSrc() + '"></iframe>';
         } else {
             box.innerHTML = '<div class="st-install">' +
                 '<div class="alert alert-info" style="text-align:center">' +
