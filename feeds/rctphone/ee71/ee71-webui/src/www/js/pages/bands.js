@@ -45,8 +45,8 @@
 
     function renderBands(container) {
         var boxes = BANDS.map(function(b) {
-            return '<label style="display:inline-flex;align-items:center;gap:.35rem;margin-right:1rem">' +
-                '<input type="checkbox" class="band-cb" data-band="' + b.n + '"> ' + escHtml(b.name) + '</label>';
+            return '<label style="display:inline-flex;align-items:center;gap:.35rem;margin-right:1rem;opacity:.45">' +
+                '<input type="checkbox" class="band-cb" data-band="' + b.n + '" disabled> ' + escHtml(b.name) + '</label>';
         }).join('');
 
         container.innerHTML =
@@ -55,16 +55,15 @@
                 '<p class="page-hint">' + escHtml(t('bands.hint')) + '</p>' +
                 '<div style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap">' +
                     '<button class="btn-outline" data-action="bandsRead">' + escHtml(t('bands.read')) + '</button>' +
-                    '<button class="btn-outline" data-action="bandsAll">' + escHtml(t('bands.all')) + '</button>' +
                 '</div>' +
                 '<div class="stat-row"><span class="label">' + escHtml(t('bands.current')) + '</span>' +
                 '<span class="value" id="bands-current">—</span></div>' +
-                '<div style="margin:1rem 0 .5rem"><span class="label">' + escHtml(t('bands.select')) + ':</span></div>' +
+                '<div style="margin:1rem 0 .5rem"><span class="label">' + escHtml(t('bands.select')) + ' (LTE — ' + escHtml(t('bands.pending')) + '):</span></div>' +
                 '<div id="bands-boxes">' + boxes + '</div>' +
                 '<div class="stat-row" style="margin-top:1rem"><span class="label">' + escHtml(t('bands.command')) + '</span>' +
                 '<code class="value" id="bands-cmd" style="word-break:break-all">—</code></div>' +
                 '<div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">' +
-                    '<button class="btn-primary" data-action="bandsApply">' + escHtml(t('bands.lock')) + '</button>' +
+                    '<button class="btn-primary" data-action="bandsApply" disabled style="opacity:.45">' + escHtml(t('bands.lock')) + '</button>' +
                 '</div>' +
                 '<div style="margin-top:1.5rem">' +
                     '<div class="stat-row"><span class="label">' + escHtml(t('bands.custom')) + '</span></div>' +
@@ -77,7 +76,6 @@
                 '<pre id="bands-out" style="margin-top:1rem;white-space:pre-wrap"></pre>' +
             '</div>';
 
-        $('#bands-boxes').addEventListener('change', _updateCmd);
         _read();
     }
 
@@ -105,42 +103,17 @@
 
     function _read() {
         $('#bands-current').textContent = '…';
-        API.cgiGet('bandpref.cgi', { action: 'get' }).then(function(r) {
-            var out = (r && r.mask) || '';
-            $('#bands-out').textContent = 'QMI NAS Get System Selection Preference -> LTE band mask: 0x' + out;
-            var mask = _hexToMask(out);
-            if (mask) {
-                _mask = mask;
-                _applyMaskToCheckboxes(mask);
-                var hex = _maskToHex(mask);
-                $('#bands-current').textContent = (hex === '0000000000000000' ? t('bands.allUnrestricted') : '0x' + hex);
-            } else {
-                $('#bands-current').textContent = '(unparsed — see raw below)';
-            }
-            _updateCmd();
+        API.cgiPost('at.cgi', { action: 'send', cmd: 'AT$QCBANDPREF?' }).then(function(r) {
+            var out = (r && r.output) || '';
+            $('#bands-out').textContent = out + '\n\n' + t('bands.note3g');
+            $('#bands-current').textContent = '3G only';
         }).catch(function(e) {
             $('#bands-current').textContent = App.errorText(e);
         });
     }
 
     function _apply() {
-        var mask = _currentMask();
-        if (!mask) return;
-        var hex = _maskToHex(mask);
-        // confirmDialog — колбэковый API: (message, onYes, onNo, opts).
-        App.confirmDialog(t('bands.warn'), function() {
-            $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\n…';
-            API.cgiGet('bandpref.cgi', { action: 'set', mask: hex }).then(function(r) {
-                if (r && r.ok) {
-                    $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\nOK';
-                } else {
-                    $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\nERROR: ' + ((r && r.error) || 'unknown');
-                }
-                _read();
-            }).catch(function(e) {
-                $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\nERROR: ' + App.errorText(e);
-            });
-        }, null, { danger: true, confirmText: t('bands.lock') });
+        $('#bands-out').textContent = t('bands.pending');
     }
 
     function _custom() {
