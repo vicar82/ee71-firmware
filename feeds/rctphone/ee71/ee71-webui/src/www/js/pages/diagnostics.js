@@ -335,7 +335,7 @@
             var ports = Array.isArray(data) ? data : (data && data.ports ? data.ports : []);
             if (ports.length === 0) {
                 tab.innerHTML = '<div class="card"><h3>Listening Ports</h3><p class="text-muted">No open ports found</p>' +
-                    '<div class="form-actions"><button ' + actionAttr('diagRefreshPorts') + '>' + icon('ic-refresh') + ' Refresh</button></div></div>';
+                    '<div class="form-actions"><button ' + actionAttr('diagRefreshPorts') + ' class="btn-outline">' + icon('ic-refresh') + ' Refresh</button></div></div>';
                 return;
             }
             tab.innerHTML = '<div class="card">' +
@@ -357,11 +357,11 @@
                         '<td>' + escHtml(p.process || p.program || '') + '</td></tr>';
                 }).join('') +
                 '</tbody></table>' +
-                '<div class="form-actions mt-1"><button ' + actionAttr('diagRefreshPorts') + '>' + icon('ic-refresh') + ' Refresh</button></div>' +
+                '<div class="form-actions mt-1"><button ' + actionAttr('diagRefreshPorts') + ' class="btn-outline">' + icon('ic-refresh') + ' Refresh</button></div>' +
             '</div>';
         }).catch(function(e) {
             tab.innerHTML = '<div class="card"><h3>Listening Ports</h3><p class="text-danger">Error: ' + escHtml(e.message) + '</p>' +
-                '<div class="form-actions"><button ' + actionAttr('diagRefreshPorts') + '>' + icon('ic-refresh') + ' Refresh</button></div></div>';
+                '<div class="form-actions"><button ' + actionAttr('diagRefreshPorts') + ' class="btn-outline">' + icon('ic-refresh') + ' Refresh</button></div></div>';
         });
     }
 

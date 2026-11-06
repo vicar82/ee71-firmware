@@ -90,14 +90,22 @@ list)
     [ -f "$LEASES" ] || LEASES="/var/lib/misc/dnsmasq.leases"
 
     # === 4. Collect hostapd station data (MAC -> interface, connected_time) ===
+    # NB: all_sta на этом билде hostapd не печатает connected_time, поэтому
+    # MAC-строка эмитит запись сразу, а connected_time (если появится)
+    # подставляется в следующую запись через pending-переменную.
     HAPD_DATA=$(
         for IFACE in wlan0 wlan1; do
-            # hostapd_cli waits on a control-socket reply; a wedged hostapd
-            # would otherwise block this page and the whole server.
+            [ -S "/var/run/hostapd/$IFACE" ] || continue
+            # hostapd_cli ждёт ответ control-сокета; повисший hostapd
+            # иначе повесил бы и эту страницу, и весь сервер.
             run_timeout 5 hostapd_cli -i "$IFACE" -p /var/run/hostapd all_sta 2>/dev/null | \
                 awk -v iface="$IFACE" '
-                    /^[0-9a-f][0-9a-f]:[0-9a-f]/ { mac=tolower($0) }
-                    /^connected_time=/ { split($0,a,"="); print mac "\t" iface "\t" a[2] }
+                    /^[0-9a-fA-F][0-9a-fA-F]:[0-9a-fA-F]/ {
+                        if (mac != "") print mac "\t" iface "\t" ct
+                        mac = tolower($0); ct = ""
+                    }
+                    /^connected_time=/ { split($0, a, "="); ct = a[2] }
+                    END { if (mac != "") print mac "\t" iface "\t" ct }
                 '
         done
     )
@@ -224,8 +232,9 @@ list)
         # Fallback: bridge MAC table (reliable even when hostapd misses the client)
         if (iface == "" && mac in br_iface) iface = br_iface[mac]
 
-        if (iface == "wlan0") { conn = "wifi_2g" }
-        else if (iface == "wlan1") { conn = "wifi_5g" }
+        # Диапазон определяем по каналу интерфейса (на EE71 wlan0 — 5 GHz)
+        if (iface == "wlan0") { conn = (w0_ch+0 > 14) ? "wifi_5g" : "wifi_2g" }
+        else if (iface == "wlan1") { conn = (w1_ch+0 > 14) ? "wifi_5g" : "wifi_2g" }
         else if (mac in arp_ip) { conn = "usb"; iface = usb_iface }
         else {
             # Not in hostapd, bridge, or ARP — show only if lease not expired
@@ -247,8 +256,8 @@ list)
                 ip = arp_ip[mac]
                 iface = h_iface[mac]
                 if (iface == "" && mac in br_iface) iface = br_iface[mac]
-                if (iface == "wlan0") conn = "wifi_2g"
-                else if (iface == "wlan1") conn = "wifi_5g"
+                if (iface == "wlan0") conn = (w0_ch+0 > 14) ? "wifi_5g" : "wifi_2g"
+                else if (iface == "wlan1") conn = (w1_ch+0 > 14) ? "wifi_5g" : "wifi_2g"
                 else { conn = "usb"; iface = usb_iface }
                 ctime = h_time[mac]
                 if (ctime == "") ctime = "0"

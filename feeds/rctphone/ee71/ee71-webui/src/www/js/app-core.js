@@ -1126,6 +1126,8 @@ var App = (function() {
         formatBand: formatBand,
         escHtml: escHtml,
         actionAttr: actionAttr,
+        // i18n — алиас I18n.t (см. i18n.js)
+        t: t,
         // Standard form components — see the block above for usage.
         createFormField: createFormField,
         showNotification: showNotification,

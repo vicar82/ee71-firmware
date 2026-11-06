@@ -293,7 +293,15 @@
         }).then(function() {
             _msPollNetSearch(0);
         }).catch(function(e) {
-            el.innerHTML = '<p class="text-danger">Search failed: ' + escHtml(e.message) + '</p>';
+            // Поиск сорвался — возвращаем авто-режим выбора сети, иначе
+            // устройство осталось бы в ручном и могло потерять регистрацию.
+            API.webapi('SetNetworkSettings', { NetselectionMode: 0 }).catch(function() {});
+            var hint = '';
+            var msg = String((e && e.message) || e || '');
+            if (msg.indexOf('040201') !== -1 || /search.*fail/i.test(msg)) {
+                hint = '<br><small class="text-muted">Ручной поиск сетей не поддерживается этим модемом/прошивкой (код 040201). Авто-режим выбора сети восстановлен.</small>';
+            }
+            el.innerHTML = '<p class="text-danger">Search failed: ' + escHtml(msg) + '</p>' + hint;
         });
     }
 
