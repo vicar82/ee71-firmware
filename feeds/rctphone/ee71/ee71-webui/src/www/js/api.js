@@ -27,7 +27,52 @@ const API = (() => {
     let _heartbeatTimer = null;
 
     // --- Client-side inactivity timeout ---
-    const INACTIVITY_MS = 3600000; // 60 minutes (stock was 5 min — too aggressive)
+    const INACTIVITY_MS = 7200000; // 120 minutes (stock was 5 min — too aggressive)
+
+    // --- Saved credentials for background re-login ---
+    // iOS suspends JS in background tabs, the heartbeat stops, and webs kills
+    // the server session after a few idle minutes — without this, every return
+    // to the page means typing the password again. Same tradeoff as the stock
+    // UI's "save password": creds live in sessionStorage (per-tab, gone when
+    // the tab closes), never in localStorage.
+    const CREDS_KEY = 'ee71-saved-creds';
+    let _savedCreds = null;
+    let _reloginPromise = null;
+
+    function _loadSavedCreds() {
+        if (_savedCreds) return;
+        try {
+            const raw = sessionStorage.getItem(CREDS_KEY);
+            if (raw) {
+                const c = JSON.parse(raw);
+                if (c && c.u && c.p) _savedCreds = c;
+            }
+        } catch (e) { /* storage unavailable — auto re-login just won't happen */ }
+    }
+
+    function _storeCreds(u, p) {
+        _savedCreds = { u: u, p: p };
+        try { sessionStorage.setItem(CREDS_KEY, JSON.stringify(_savedCreds)); } catch (e) {}
+    }
+
+    function clearSavedCreds() {
+        _savedCreds = null;
+        try { sessionStorage.removeItem(CREDS_KEY); } catch (e) {}
+    }
+
+    // Single-flight background re-login: concurrent session-expired failures
+    // share one login attempt instead of stampeding the server.
+    function _tryRelogin() {
+        _loadSavedCreds();
+        if (!_savedCreds) return Promise.resolve(false);
+        if (_reloginPromise) return _reloginPromise;
+        _reloginPromise = login(_savedCreds.u, _savedCreds.p)
+            .then(function() { return true; })
+            .catch(function() { return false; })
+            .then(function(ok) { _reloginPromise = null; return ok; });
+        return _reloginPromise;
+    }
+    _loadSavedCreds();
     let _inactivityTimer = null;
     let _heartbeatInFlight = false;
 
@@ -547,6 +592,13 @@ const API = (() => {
                 if (code === ERR_LOGIN_LOCKED) {
                     throw new ApiError(code, 'Login locked — too many attempts, wait 5 minutes', method);
                 }
+                // Session died in the background (iOS suspends JS, heartbeat
+                // stops). Re-login silently with saved creds and retry the
+                // call once — the user returns to a live page, not a login form.
+                if (ERR_SESSION_EXPIRED.indexOf(code) !== -1) {
+                    const relogged = await _tryRelogin();
+                    if (relogged) return await webapi(method, params);
+                }
                 throw new ApiError(code, message, method);
             }
 
@@ -638,6 +690,9 @@ const API = (() => {
         // Step 6: Set cookie
         setCookie(COOKIE_PREFIX + _verificationToken);
 
+        // Remember creds for background re-login (see _tryRelogin)
+        _storeCreds(username, password);
+
         // Start heartbeat
         _startHeartbeat();
 
@@ -646,6 +701,7 @@ const API = (() => {
 
     async function logout() {
         _stopHeartbeat();
+        clearSavedCreds();
         try {
             await webapi('Logout');
         } catch (e) {
@@ -775,12 +831,20 @@ const API = (() => {
     function _handleSessionExpired() {
         _stopHeartbeat();
         _stopInactivityTimer();
-        _rememberSessionEnd('expired');
-        _verificationToken = '';
-        clearCookie();
-        // Stock behavior: call Logout → full page reload (clears all in-memory state)
-        webapi('Logout').catch(function() {}).then(function() {
-            location.reload();
+        // With saved creds, re-login in the background and continue — the
+        // login screen is the last resort, not the default.
+        _tryRelogin().then(function(ok) {
+            if (ok) {
+                _startHeartbeat();
+                return;
+            }
+            _rememberSessionEnd('expired');
+            _verificationToken = '';
+            clearCookie();
+            // Stock behavior: call Logout → full page reload (clears all in-memory state)
+            webapi('Logout').catch(function() {}).then(function() {
+                location.reload();
+            });
         });
     }
 
@@ -801,6 +865,10 @@ const API = (() => {
             }
         } catch (e) {
             if (e instanceof ApiError && ERR_SESSION_EXPIRED.indexOf(e.code) !== -1) {
+                // Stale cookie after page reload — re-login silently with the
+                // saved creds so a returning user lands on the UI, not the form.
+                const relogged = await _tryRelogin();
+                if (relogged) return true;
                 _verificationToken = '';
                 clearCookie();
                 return false;

@@ -83,7 +83,7 @@
 
     function _updateCmd() {
         var mask = _currentMask();
-        $('#bands-cmd').textContent = mask ? 'AT$QCBANDPREF=' + _maskToHex(mask) : '—';
+        $('#bands-cmd').textContent = mask ? '0x' + _maskToHex(mask) : '—';
     }
 
     function _currentMask() {
@@ -103,25 +103,17 @@
         });
     }
 
-    function _parseBandpref(output) {
-        // Вывод AT$QCBANDPREF? — ищем hex-маску LTE (64-бит) в ответе.
-        // Формат на этом модеме уточняется на живом устройстве; парсим
-        // терпеливо: последняя длинная hex-последовательность в строке.
-        var m = (output || '').match(/\b[0-9A-Fa-f]{10,16}\b/g);
-        if (!m) return null;
-        return _hexToMask(m[m.length - 1]);
-    }
-
     function _read() {
         $('#bands-current').textContent = '…';
-        API.cgiPost('at.cgi', { action: 'send', cmd: 'AT$QCBANDPREF?' }).then(function(r) {
-            var out = (r && r.output) || '';
-            $('#bands-out').textContent = out;
-            var mask = _parseBandpref(out);
+        API.cgiGet('bandpref.cgi', { action: 'get' }).then(function(r) {
+            var out = (r && r.mask) || '';
+            $('#bands-out').textContent = 'QMI NAS Get System Selection Preference -> LTE band mask: 0x' + out;
+            var mask = _hexToMask(out);
             if (mask) {
                 _mask = mask;
                 _applyMaskToCheckboxes(mask);
-                $('#bands-current').textContent = '0x' + _maskToHex(mask);
+                var hex = _maskToHex(mask);
+                $('#bands-current').textContent = (hex === '0000000000000000' ? t('bands.allUnrestricted') : '0x' + hex);
             } else {
                 $('#bands-current').textContent = '(unparsed — see raw below)';
             }
@@ -134,15 +126,19 @@
     function _apply() {
         var mask = _currentMask();
         if (!mask) return;
-        var cmd = 'AT$QCBANDPREF=' + _maskToHex(mask);
+        var hex = _maskToHex(mask);
         // confirmDialog — колбэковый API: (message, onYes, onNo, opts).
         App.confirmDialog(t('bands.warn'), function() {
-            $('#bands-out').textContent = '> ' + cmd + '\n…';
-            API.cgiPost('at.cgi', { action: 'send', cmd: cmd }).then(function(r) {
-                $('#bands-out').textContent = '> ' + cmd + '\n' + ((r && r.output) || '');
+            $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\n…';
+            API.cgiGet('bandpref.cgi', { action: 'set', mask: hex }).then(function(r) {
+                if (r && r.ok) {
+                    $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\nOK';
+                } else {
+                    $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\nERROR: ' + ((r && r.error) || 'unknown');
+                }
                 _read();
             }).catch(function(e) {
-                $('#bands-out').textContent = '> ' + cmd + '\nERROR: ' + App.errorText(e);
+                $('#bands-out').textContent = '> QMI set LTE band mask 0x' + hex + '\nERROR: ' + App.errorText(e);
             });
         }, null, { danger: true, confirmText: t('bands.lock') });
     }

@@ -48,10 +48,11 @@
             'ussd.balance': 'Balance', 'ussd.traffic': 'Traffic left', 'ussd.number': 'My number',
 
             'bands.title': 'LTE band lock',
-            'bands.hint': 'Which LTE bands the modem may use. Applied via AT$QCBANDPREF and kept in modem NV. Wrong lock can drop service — "All bands" always recovers.',
+            'bands.hint': 'Which LTE bands the modem may use. Applied via QMI (AT$QCBANDPREF on this modem has no LTE bands — it is a 3G-era command). Applies immediately; the modem re-registers on the new bands. Wrong lock can drop service — "All bands" always recovers.',
             'bands.read': 'Read current', 'bands.lock': 'Apply lock', 'bands.all': 'All bands',
             'bands.current': 'Current preference', 'bands.select': 'Allowed bands',
-            'bands.command': 'Command to send', 'bands.custom': 'Custom AT command',
+            'bands.command': 'Mask to apply', 'bands.custom': 'Custom AT command',
+            'bands.allUnrestricted': 'all bands (unrestricted)',
             'bands.warn': 'Band lock will be applied immediately. If the selected bands have no coverage, the device loses service until you revert to "All bands". Continue?'
         },
         ru: {
@@ -87,10 +88,11 @@
             'ussd.balance': 'Баланс', 'ussd.traffic': 'Остаток трафика', 'ussd.number': 'Мой номер',
 
             'bands.title': 'Блокировка LTE-диапазонов',
-            'bands.hint': 'Какие диапазоны LTE разрешено использовать модему. Применяется через AT$QCBANDPREF и хранится в NV модема. Ошибочная блокировка отрубит связь — «Все диапазоны» всегда лечит.',
+            'bands.hint': 'Какие диапазоны LTE разрешено использовать модему. Применяется через QMI (AT$QCBANDPREF на этом модеме не содержит LTE-диапазонов — это команда эпохи 3G). Вступает в силу сразу, модем перерегистрируется в сети. Ошибочная блокировка отрубит связь — «Все диапазоны» всегда лечит.',
             'bands.read': 'Прочитать текущее', 'bands.lock': 'Применить блокировку', 'bands.all': 'Все диапазоны',
             'bands.current': 'Текущие предпочтения', 'bands.select': 'Разрешённые диапазоны',
-            'bands.command': 'Команда к отправке', 'bands.custom': 'Своя AT-команда',
+            'bands.command': 'Маска к применению', 'bands.custom': 'Своя AT-команда',
+            'bands.allUnrestricted': 'все диапазоны (без ограничений)',
             'bands.warn': 'Блокировка применится сразу. Если выбранные диапазоны не ловятся в вашей зоне, связь пропадёт, пока не вернёте «Все диапазоны». Продолжить?'
         }
     };
