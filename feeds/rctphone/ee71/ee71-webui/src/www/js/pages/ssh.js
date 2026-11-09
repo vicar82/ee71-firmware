@@ -7,6 +7,23 @@
             '<h2>SSH</h2>' +
             '<div id="ssh-content"><div class="card"><div class="page-loading"><div class="spinner"></div> Loading...</div></div></div>';
         _loadSSH();
+            var pwt = el.querySelector('#ssh-pw-toggle');
+            if (pwt) pwt.addEventListener('click', function() {
+                var disable = s.password_auth !== false;
+                App.confirmDialog(
+                    disable
+                        ? 'Вход по паролю будет ОТКЛЮЧЁН. SSH будет принимать только ключи из списка ниже. Убедись, что твой ключ работает (проверь в новой сессии), прежде чем закрывать текущую.'
+                        : 'Вход по паролю будет включён.',
+                    function() {
+                        API.cgiPost('ssh.cgi', { action: 'pwauth', password: !disable }).then(function() {
+                            _loadSSH();
+                        }).catch(function(e) { alert(App.errorText(e)); });
+                    },
+                    null,
+                    { title: 'SSH-аутентификация', confirmText: disable ? 'Отключить пароль' : 'Включить пароль', danger: disable }
+                );
+            });
+
     }
 
     function _loadSSH() {
@@ -39,6 +56,9 @@
                 '<div class="card">' +
                     '<h3>Dropbear SSH</h3>' +
                     '<div class="stat-row"><span class="label">Status</span><span class="value">' + (s.running ? 'Running (PID ' + escHtml(s.pid) + ')' : 'Stopped') + '</span></div>' +
+                    '<div class="stat-row"><span class="label">Вход по паролю</span><span class="value">' +
+                        (s.password_auth === false ? 'выключен (только ключи)' : 'включён') +
+                        ' <button class="btn-small" id="ssh-pw-toggle">' + (s.password_auth === false ? 'Включить пароль' : 'Только ключи') + '</button></span></div>' +
                     '<div class="stat-row"><span class="label">Port</span><span class="value">' + (s.port || 22) + '</span></div>' +
                     (s.host_keys ? s.host_keys.map(function(hk) {
                         return '<div class="stat-row"><span class="label">' + escHtml(hk.type) + ' key</span><span class="value text-mono text-small">' + escHtml(hk.fingerprint) + '</span></div>';

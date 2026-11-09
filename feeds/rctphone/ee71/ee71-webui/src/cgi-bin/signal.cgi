@@ -75,6 +75,22 @@ ca)
     exit 0
     ;;
 
+    hist)
+        # история RSRP из /tmp/signallog (signal_history.sh, cron ежеминутно)
+        echo '{"ok":true,"points":['
+        first=1
+        if [ -f /tmp/signallog ]; then
+            tail -n 720 /tmp/signallog | while read -r ts band rsrp ca cells; do
+                printf '[%s,%s],' "$ts" "$rsrp"
+            done > /tmp/sig_hist.$$
+            # убрать последнюю запятую
+            H=$(cat /tmp/sig_hist.$$)
+            rm -f /tmp/sig_hist.$$
+            H=${H%,}
+            printf '%s' "$H"
+        fi
+        echo ']}'
+        ;;
 *)
     printf '{"error":"unknown action"}'
     ;;

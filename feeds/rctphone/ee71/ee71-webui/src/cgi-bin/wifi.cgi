@@ -334,6 +334,23 @@ restart)
     esac
     ;;
 
+    sleepget)
+        E=0; S=01:00; EN=07:00
+        [ -f /jrd-resource/wifisleep.conf ] && . /jrd-resource/wifisleep.conf
+        jq -n --argjson e "$E" --arg s "$S" --arg en "$EN" \
+            '{ok:true,enabled:$e,start:$s,end:$en}'
+        ;;
+    sleepset)
+        E=$(echo "$BODY" | jq -r '.enabled // 0')
+        S=$(echo "$BODY" | jq -r '.start // "01:00"')
+        EN=$(echo "$BODY" | jq -r '.end // "07:00"')
+        case "$S:$EN" in
+            *[!0-9:]*) json_err "time must be HH:MM" ; exit 0 ;;
+        esac
+        printf 'ENABLED=%s\nSTART=%s\nEND=%s\n' "$E" "$S" "$EN" > /jrd-resource/wifisleep.conf
+        /usr/bin/wifisleep.sh
+        echo '{"ok":true}'
+        ;;
 *)
     echo '{"error":"unknown action"}'
     ;;

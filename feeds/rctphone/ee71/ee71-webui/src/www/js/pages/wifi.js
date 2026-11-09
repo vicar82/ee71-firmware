@@ -15,9 +15,53 @@
             '</div>' +
             '<div class="wifi-save-row">' +
                 '<button id="w-save-all" ' + actionAttr('saveWifiAll') + '>Save</button>' +
-            '</div>';
+            '</div>' +
+            '<div id="wifi-sleep-card"></div>';
 
         _loadWifiSettings();
+        _loadWifiSleep();
+    }
+
+    // --- Sleep schedule (wifisleep.sh, ifconfig wlan0 down/up) ---
+
+    function _loadWifiSleep() {
+        var el = document.getElementById('wifi-sleep-card');
+        if (!el) return;
+        el.innerHTML = '<div class="card"><div class="page-loading"><div class="spinner"></div> Loading...</div></div>';
+        API.cgiGet('wifi.cgi', { action: 'sleepget' }).then(function(r) {
+            if (!el) return;
+            el.innerHTML =
+                '<div class="card">' +
+                    '<h3>Расписание сна Wi-Fi</h3>' +
+                    '<p class="text-small text-muted">В заданный интервал радио отключается (клиенты отваливаются, hostapd живёт). Экономия батареи в нерабочие часы.</p>' +
+                    '<label style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">' +
+                        '<input type="checkbox" id="ws-enable"' + (r.enabled ? ' checked' : '') + '> Включено' +
+                    '</label>' +
+                    '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">' +
+                        '<span>с</span><input type="time" id="ws-start" value="' + escHtml(r.start || '01:00') + '">' +
+                        '<span>до</span><input type="time" id="ws-end" value="' + escHtml(r.end || '07:00') + '">' +
+                        '<button class="btn-primary" id="ws-save">Сохранить</button>' +
+                    '</div>' +
+                    '<div id="ws-status" style="margin-top:.5rem;font-size:.9rem"></div>' +
+                '</div>';
+            var btn = el.querySelector('#ws-save');
+            if (btn) btn.addEventListener('click', function() {
+                var st = el.querySelector('#ws-status');
+                if (st) st.textContent = 'Сохранение…';
+                API.cgiPost('wifi.cgi', {
+                    action: 'sleepset',
+                    enabled: el.querySelector('#ws-enable').checked ? 1 : 0,
+                    start: el.querySelector('#ws-start').value || '01:00',
+                    end: el.querySelector('#ws-end').value || '07:00'
+                }).then(function() {
+                    if (st) st.textContent = 'Сохранено.';
+                }).catch(function(e) {
+                    if (st) st.textContent = 'Ошибка: ' + App.errorText(e);
+                });
+            });
+        }).catch(function(e) {
+            if (el) el.innerHTML = '<div class="card"><p class="text-danger">' + escHtml(App.errorText(e)) + '</p></div>';
+        });
     }
 
     var SEC_MAP = {0:'OPEN',1:'WEP',2:'WPA-PSK',3:'WPA2-PSK',4:'WPA/WPA2-PSK'};

@@ -31,8 +31,88 @@
     function renderLan(container) {
         container.innerHTML =
             '<h2>LAN</h2>' +
-            '<div id="lan-content"><div class="card"><div class="page-loading"><div class="spinner"></div> Loading...</div></div></div>';
+            '<div id="lan-content"><div class="card"><div class="page-loading"><div class="spinner"></div> Loading...</div></div></div>' +
+            '<div id="lan-static"></div>';
         _loadLan();
+        _loadStaticLeases();
+    }
+
+    // --- Static DHCP leases (dhcphosts.cgi, dnsmasq --dhcp-hostsfile) ---
+
+    function _loadStaticLeases() {
+        var el = $('#lan-static');
+        if (!el) return;
+        el.innerHTML = '<div class="card"><div class="page-loading"><div class="spinner"></div> Loading...</div></div>';
+        API.cgiGet('dhcphosts.cgi', { action: 'list' }).then(function(r) {
+            if (!el) return;
+            var st = r.static || [];
+            var leases = r.leases || [];
+            var stHtml = st.length
+                ? '<table class="data-table"><thead><tr><th>MAC</th><th>IP</th><th>Name</th><th></th></tr></thead><tbody>' +
+                  st.map(function(h) {
+                      return '<tr><td class="text-mono text-small">' + escHtml(h.mac) + '</td><td class="text-mono">' + escHtml(h.ip) + '</td><td>' + escHtml(h.name || '') + '</td>' +
+                          '<td><button class="btn-small btn-danger" data-dhcp-del="' + escHtml(h.mac) + '">Удалить</button></td></tr>';
+                  }).join('') + '</tbody></table>'
+                : '<p class="text-muted">Нет закреплённых аренд</p>';
+            var lnHtml = leases.length
+                ? '<table class="data-table"><thead><tr><th>MAC</th><th>IP</th><th>Name</th><th></th></tr></thead><tbody>' +
+                  leases.map(function(c) {
+                      return '<tr><td class="text-mono text-small">' + escHtml(c.mac) + '</td><td class="text-mono">' + escHtml(c.ip) + '</td><td>' + escHtml(c.name || '') + '</td>' +
+                          '<td><button class="btn-small" data-dhcp-pin="' + escHtml(c.mac) + '|' + escHtml(c.ip) + '|' + escHtml(c.name || '') + '">Закрепить</button></td></tr>';
+                  }).join('') + '</tbody></table>'
+                : '<p class="text-muted">Активных аренд нет</p>';
+            el.innerHTML =
+                '<div class="card">' +
+                    '<h3>Статические аренды DHCP</h3>' +
+                    stHtml +
+                    '<h4 style="margin-top:1rem">Добавить вручную</h4>' +
+                    '<div style="display:flex;gap:.5rem;flex-wrap:wrap">' +
+                        '<input type="text" id="dhcp-mac" placeholder="AA:BB:CC:DD:EE:FF" style="flex:1;min-width:9rem">' +
+                        '<input type="text" id="dhcp-ip" placeholder="192.168.8.50" style="flex:1;min-width:7rem">' +
+                        '<input type="text" id="dhcp-name" placeholder="имя (необяз.)" style="flex:1;min-width:7rem">' +
+                        '<button class="btn-primary" id="dhcp-add">Добавить</button>' +
+                    '</div>' +
+                    '<div id="dhcp-status" style="margin-top:.5rem;font-size:.9rem"></div>' +
+                    '<h4 style="margin-top:1rem">Текущие клиенты (закрепить)</h4>' +
+                    lnHtml +
+                '</div>';
+            el.querySelectorAll('[data-dhcp-del]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    API.cgiPost('dhcphosts.cgi', { action: 'del', mac: b.dataset.dhcpDel }).then(_loadStaticLeases);
+                });
+            });
+            el.querySelectorAll('[data-dhcp-pin]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    var parts = b.dataset.dhcpPin.split('|');
+                    _dhcpAdd(parts[0], parts[1], parts[2]);
+                });
+            });
+            var addBtn = el.querySelector('#dhcp-add');
+            if (addBtn) addBtn.addEventListener('click', function() {
+                _dhcpAdd(
+                    (el.querySelector('#dhcp-mac') || {}).value || '',
+                    (el.querySelector('#dhcp-ip') || {}).value || '',
+                    (el.querySelector('#dhcp-name') || {}).value || ''
+                );
+            });
+        }).catch(function(e) {
+            if (el) el.innerHTML = '<div class="card"><p class="text-danger">' + escHtml(App.errorText(e)) + '</p></div>';
+        });
+    }
+
+    function _dhcpAdd(mac, ip, name) {
+        var st = document.getElementById('dhcp-status');
+        mac = (mac || '').trim();
+        ip = (ip || '').trim();
+        name = (name || '').trim();
+        if (!mac) { if (st) st.textContent = 'Укажи MAC'; return; }
+        if (!ip) { if (st) st.textContent = 'Укажи IP'; return; }
+        if (st) st.textContent = 'Сохранение…';
+        API.cgiPost('dhcphosts.cgi', { action: 'add', mac: mac, ip: ip, name: name }).then(function() {
+            _loadStaticLeases();
+        }).catch(function(e) {
+            if (st) st.textContent = 'Ошибка: ' + App.errorText(e);
+        });
     }
 
     // Dotted-quad check — the CGI/webapi accepts anything and then fails opaquely.

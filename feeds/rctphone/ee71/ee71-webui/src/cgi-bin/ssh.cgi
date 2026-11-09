@@ -130,9 +130,10 @@ status)
     done
     KEYS_JSON="${KEYS_JSON}]"
 
-    jq -n --argjson running "$RUNNING" --arg pid "$PID" \
+    if grep -q '^[[:space:]]*DROPBEAR_EXTRA_ARGS=.*-s' /etc/default/dropbear 2>/dev/null; then PWAUTH=false; else PWAUTH=true; fi
+    jq -n --argjson running "$RUNNING" --argjson pwauth "$PWAUTH" --arg pid "$PID" \
         --argjson port "$PORT" --argjson host_keys "$KEYS_JSON" \
-        '{"running":$running,"pid":$pid,"port":$port,"host_keys":$host_keys}'
+        '{"running":$running,"password_auth":$pwauth,"pid":$pid,"port":$port,"host_keys":$host_keys}'
     ;;
 
 keys)
@@ -443,6 +444,22 @@ restore-keys)
     printf '{"ok":true}'
     ;;
 
+    pwauth)
+        PW=$(echo "$BODY" | jq -r '.password // empty')
+        case "$PW" in
+            true|false) ;;
+            *) json_err "password must be true|false" ; exit 0 ;;
+        esac
+        if [ "$PW" = "false" ]; then
+            KEYS=$(grep -c -v '^[[:space:]]*$' /etc/dropbear/authorized_keys 2>/dev/null)
+            [ "${KEYS:-0}" -gt 0 ] || { json_err "refusing: no authorized keys installed - you would be locked out"; exit 0; }
+            sed -i 's/^DROPBEAR_EXTRA_ARGS=.*/DROPBEAR_EXTRA_ARGS="-s"/' /etc/default/dropbear
+        else
+            sed -i 's/^DROPBEAR_EXTRA_ARGS=.*/DROPBEAR_EXTRA_ARGS=""/' /etc/default/dropbear
+        fi
+        /etc/init.d/dropbear restart >/dev/null 2>&1
+        jq -n --argjson pw "$PW" '{ok:true,password:$pw}'
+        ;;
 *)
     printf '{"error":"unknown action"}'
     ;;

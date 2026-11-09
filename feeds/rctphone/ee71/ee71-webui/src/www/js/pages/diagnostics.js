@@ -9,10 +9,12 @@
                 '<button class="active" data-tab="sysinfo">System Info</button>' +
                 '<button data-tab="ports">Open Ports</button>' +
                 '<button data-tab="snapshot">LTE Snapshot</button>' +
+                '<button data-tab="signal">Signal 12h</button>' +
             '</div>' +
             '<div class="tab-content active" id="diag-tab-sysinfo"></div>' +
             '<div class="tab-content" id="diag-tab-ports"></div>' +
-            '<div class="tab-content" id="diag-tab-snapshot"></div>';
+            '<div class="tab-content" id="diag-tab-snapshot"></div>' +
+            '<div class="tab-content" id="diag-tab-signal"></div>';
 
         $$('#diag-tabs button').forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -27,6 +29,7 @@
         _renderSysInfo();
         _renderOpenPorts();
         _renderSnapshot();
+        _renderSignal();
     }
 
     // --- System Info tab ---
@@ -489,6 +492,53 @@
     function _snapToast(msg) {
         var btn = document.querySelector('[data-action="diagSnapCopy"]');
         if (btn) { var orig = btn.textContent; btn.textContent = msg; setTimeout(function() { btn.textContent = orig; }, 2000); }
+    }
+
+
+    // --- Signal history tab (RSRP 12h, signal_history.sh -> /tmp/signallog) ---
+
+    function _renderSignal() {
+        var tab = $('#diag-tab-signal');
+        if (!tab) return;
+        tab.innerHTML = '<div class="card"><h3>RSRP, 12 часов</h3>' +
+            '<p class="text-small text-muted">Точка раз в минуту (PCC). Полезно для выбора места роутера: смотрим худшие значения за ночь, а не моментальные.</p>' +
+            '<div id="diag-signal-graph">…</div></div>';
+        API.cgiGet('signal.cgi', { action: 'hist' }).then(function(r) {
+            var el = $('#diag-signal-graph');
+            if (!el) return;
+            var pts = r.points || [];
+            if (pts.length < 2) { el.innerHTML = '<p class="text-muted">История появится через несколько минут (логгер стартует с cron).</p>'; return; }
+            el.innerHTML = _signalGraph(pts);
+        }).catch(function(e) {
+            var el = $('#diag-signal-graph');
+            if (el) el.innerHTML = '<p class="text-danger">' + escHtml(App.errorText(e)) + '</p>';
+        });
+    }
+
+    function _signalGraph(points) {
+        var w = 640, h = 150, pad = 10;
+        var vals = points.map(function(p) { return p[1]; });
+        var max = Math.max.apply(null, vals.concat([-60]));
+        var min = Math.min.apply(null, vals.concat([-120]));
+        var span = (max - min) || 1;
+        var step = (w - 2 * pad) / (points.length - 1);
+        var poly = points.map(function(p, i) {
+            var x = pad + i * step;
+            var y = pad + ((max - p[1]) / span) * (h - 2 * pad);
+            return x.toFixed(1) + ',' + y.toFixed(1);
+        }).join(' ');
+        // пороги качества: -80 хорошо, -90 терпимо, -110 плохо
+        function yOf(v) { return pad + ((max - v) / span) * (h - 2 * pad); }
+        var grid = [-80, -95, -110].map(function(v) {
+            var y = yOf(v);
+            var color = v === -80 ? '#2e7d32' : (v === -95 ? '#b45309' : '#c0392b');
+            return '<line x1="' + pad + '" y1="' + y + '" x2="' + (w - pad) + '" y2="' + y + '" stroke="' + color + '" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.6"/>' +
+                   '<text x="' + (pad + 2) + '" y="' + (y - 2) + '" font-size="8" fill="' + color + '">' + v + '</text>';
+        }).join('');
+        return '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto">' + grid +
+            '<polyline points="' + poly + '" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
+            '<text x="' + pad + '" y="' + (pad + 8) + '" font-size="8">max ' + max.toFixed(0) + ' dBm</text>' +
+            '<text x="' + pad + '" y="' + (h - pad) + '" font-size="8">min ' + min.toFixed(0) + ' dBm</text></svg>';
     }
 
     App.registerPage('diagnostics', renderDiagnostics);
