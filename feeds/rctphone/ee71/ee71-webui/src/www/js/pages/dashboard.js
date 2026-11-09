@@ -281,30 +281,33 @@
 
             if (live.length > 1) {
                 var bands = live.map(function(c) { return 'B' + c.band; });
-                if (bandEl) bandEl.textContent = bands.join('+');
+                var shown = bands.length > 4 ? bands.slice(0, 3).concat(['+' + (bands.length - 3)]) : bands;
+                if (bandEl) bandEl.textContent = shown.join('+');
                 if (bodyEl) {
                     var rows = live.map(function(c) {
                         var cls = c.rsrp != null ? (
                             c.rsrp >= -80 ? 'text-success' :
                             c.rsrp >= -100 ? 'text-warn' : 'text-danger') : '';
+                        var rsrp = c.rsrp != null ? Math.round(c.rsrp) : '\u2014';
                         return '<tr>' +
-                            '<td style="padding:.2rem .25rem .2rem 0;white-space:nowrap;overflow:hidden">' + escHtml(c.type.toUpperCase()) + '</td>' +
-                            '<td style="padding:.2rem .25rem;white-space:nowrap;overflow:hidden">B' + escHtml(c.band) + '</td>' +
-                            '<td style="padding:.2rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(c.earfcn) + '</td>' +
-                            '<td style="padding:.2rem .25rem;white-space:nowrap;overflow:hidden">' + (c.pci != null ? escHtml(c.pci) : '\u2014') + '</td>' +
-                            '<td class="' + cls + '" style="padding:.2rem 0 .2rem .25rem;white-space:nowrap;overflow:hidden">' + (c.rsrp != null ? escHtml(c.rsrp) : '\u2014') + '</td>' +
+                            '<td style="padding:.15rem .2rem .15rem 0;white-space:nowrap">' + escHtml(c.type.toUpperCase()) + '</td>' +
+                            '<td style="padding:.15rem .2rem;white-space:nowrap">B' + escHtml(c.band) + '</td>' +
+                            '<td style="padding:.15rem .2rem;white-space:nowrap">' + escHtml(c.earfcn) + '</td>' +
+                            '<td style="padding:.15rem .2rem;white-space:nowrap">' + (c.pci != null ? escHtml(c.pci) : '\u2014') + '</td>' +
+                            '<td class="' + cls + '" style="padding:.15rem 0 .15rem .2rem;white-space:nowrap;text-align:right">' + rsrp + '</td>' +
                             '</tr>';
                     }).join('');
-                    var note = live.length > 2 ? '<div class="text-muted" style="font-size:.65rem;margin-top:.3rem">CA ≤2CC — строки сверх 2 это соседние ячейки, не несущие</div>' : '';
+                    var note = live.length > 3 ? '<div class="text-muted" style="font-size:.62rem;margin-top:.25rem;line-height:1.25">\u22643CC \u2014 \u0441\u0432\u0435\u0440\u0445: \u0441\u043e\u0441\u0435\u0434\u0438</div>' : '';
                     bodyEl.innerHTML =
-                        '<table class="ca-table" style="width:100%;font-size:.72rem;border-collapse:collapse;table-layout:fixed">' +
+                        '<div style="overflow-x:auto;max-width:100%;display:block;-webkit-overflow-scrolling:touch">' +
+                        '<table class="ca-table" style="width:auto;max-width:100%;font-size:.65rem;border-collapse:collapse">' +
                         '<thead><tr style="text-align:left;opacity:.7">' +
-                        '<th style="padding:.15rem .25rem .15rem 0;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.cell')) + '</th>' +
-                        '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.band')) + '</th>' +
-                        '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.earfcn')) + '</th>' +
-                        '<th style="padding:.15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.pci')) + '</th>' +
-                        '<th style="padding:.15rem 0 .15rem .25rem;white-space:nowrap;overflow:hidden">' + escHtml(t('dash.ca.rsrp')) + ', dBm</th>' +
-                        '</tr></thead><tbody>' + rows + '</tbody></table>' + note;
+                        '<th style="padding:.1rem .2rem .1rem 0;white-space:nowrap;font-weight:normal"></th>' +
+                        '<th style="padding:.1rem .2rem;white-space:nowrap;font-weight:normal">' + escHtml(t('dash.ca.band')) + '</th>' +
+                        '<th style="padding:.1rem .2rem;white-space:nowrap;font-weight:normal">' + escHtml(t('dash.ca.earfcn')) + '</th>' +
+                        '<th style="padding:.1rem .2rem;white-space:nowrap;font-weight:normal">' + escHtml(t('dash.ca.pci')) + '</th>' +
+                        '<th style="padding:.1rem 0 .1rem .2rem;white-space:nowrap;font-weight:normal;text-align:right">RSRP</th>' +
+                        '</tr></thead><tbody>' + rows + '</tbody></table></div>' + note;
                 }
             } else if (live.length === 1) {
                 if (bandEl) bandEl.textContent = 'LTE B' + live[0].band;

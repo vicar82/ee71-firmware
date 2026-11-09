@@ -4,6 +4,7 @@
 
     var _lanData = null;
     var _dnsData = null;
+    var _dnsCgi = null;
 
     var DNS_PRESETS = [
         { label: 'Auto (from carrier)', v1: '', v2: '' },
@@ -47,9 +48,11 @@
             API.webapi('GetLanSettings').catch(function() { return null; }),
             API.webapi('getDNSInfo').catch(function() { return null; }),
             API.cgiGet('system.cgi', { action: 'interfaces' }).catch(function() { return null; }),
+            API.cgiGet('dns.cgi', { action: 'get' }).catch(function() { return null; }),
         ]).then(function(results) {
             _lanData = results[0];
             _dnsData = results[1];
+            _dnsCgi = (results[3] && results[3].ok) ? results[3] : null;
             var sysIfaces = results[2];
             var el = $('#lan-content');
             if (!el) return;
@@ -202,13 +205,19 @@
         var leaseHours = parseInt(lan.DHCPLeaseTime, 10);
         if (!(leaseHours > 0)) leaseHours = 12;
 
-        // GetLanSettings is the authority: the stock LAN page reads the whole
-        // object from it and posts the same object straight back to
-        // SetLanSettings (mobile build.formatted.js:66137-66152), DNS fields
-        // included. getDNSInfo is only a fallback for a firmware that leaves
-        // them out of GetLanSettings.
-        var curDns1 = lan.DNSAddress1 || dns.DNSAddress1 || '';
-        var curDns2 = lan.DNSAddress2 || dns.DNSAddress2 || '';
+        // DNS authority is dns.cgi (dnsmasq-apply + /jrd-resource/dns.conf):
+        // SetLanSettings was verified live to ALWAYS reboot the device, even
+        // with byte-identical values (0.1s response, then an instant reboot),
+        // so the DNS fields of the webs DB are not written anymore. The webs
+        // values remain only as a fallback display when the CGI is missing.
+        var curDns1, curDns2;
+        if (_dnsCgi) {
+            curDns1 = _dnsCgi.lan_mode === 'custom' ? (_dnsCgi.lan_dns1 || '') : '';
+            curDns2 = _dnsCgi.lan_mode === 'custom' ? (_dnsCgi.lan_dns2 || '') : '';
+        } else {
+            curDns1 = lan.DNSAddress1 || dns.DNSAddress1 || '';
+            curDns2 = lan.DNSAddress2 || dns.DNSAddress2 || '';
+        }
 
         // Find matching preset
         var presetIdx = -1;
@@ -257,7 +266,8 @@
             '<div class="float-field">' +
                 '<label>DNS server 2</label>' +
                 '<input type="text" id="lan-dns2" value="' + escHtml(curDns2) + '" placeholder="Auto">' +
-            '</div>';
+            '</div>' +
+            '<p class="text-small" style="margin-top:8px">DNS applies instantly. Changing the DHCP pool reboots the router.</p>';
 
         _showPanel('DHCP Settings', fieldsHTML, _saveDhcp);
 
@@ -386,27 +396,59 @@
         if (dns1 && !_isIPv4(dns1)) return App.renderFieldError('#lan-dns1', 'Enter a valid IPv4 address or leave blank');
         if (dns2 && !_isIPv4(dns2)) return App.renderFieldError('#lan-dns2', 'Enter a valid IPv4 address or leave blank');
 
-        // DNS travels inside SetLanSettings as DNSMode/DNSAddress1/DNSAddress2 —
-        // the names GetLanSettings hands back, and the only DNS parameter names
-        // core_app contains. The old setDNSInfo{PrimaryDNS,SecondaryDNS} call
-        // used the key names from the (unrelated) wired-WAN page: neither
-        // "PrimaryDNS" nor "SecondaryDNS" appears anywhere in the core_app
-        // binary, so that write could not have taken effect.
-        var params = _lanPayload({
-            StartIPAddress: startIP,
-            EndIPAddress: _endIPFromPool(startIP, poolSize, routerIP, mask),
-            DHCPLeaseTime: leaseHours,
-            DNSMode: (dns1 || dns2) ? 1 : 0,
-            DNSAddress1: dns1,
-            DNSAddress2: dns2
-        });
+        // DNS goes through dns.cgi — dnsmasq-apply restarts the daemon
+        // instantly, no reboot. The preset decides both axes at once:
+        // Auto = carrier upstream + router handed to clients; anything else =
+        // those servers upstream AND in the DHCP option 6 for clients.
+        var dnsPayload;
+        if (!dns1 && !dns2) {
+            dnsPayload = { action: 'set', upstream: '', lan_mode: 'router', lan_dns1: '', lan_dns2: '' };
+        } else {
+            dnsPayload = { action: 'set', upstream: [dns1, dns2].filter(Boolean).join(' '), lan_mode: 'custom', lan_dns1: dns1, lan_dns2: dns2 };
+        }
 
-        App.wrapFormSubmit('#lan-panel-save', function() {
-            return API.webapi('SetLanSettings', params).then(function() {
-                _hidePanel();
-                return _loadLan();
-            });
-        }, { success: 'DHCP settings saved' });
+        // DHCP pool/lease still travel via SetLanSettings — which reboots the
+        // device unconditionally (verified live with identical values), so it
+        // is called only when the user actually changed something, and without
+        // the DNS keys: dns.cgi owns DNS from now on.
+        var lanBase = _lanData || {};
+        var newEndIP = _endIPFromPool(startIP, poolSize, routerIP, mask);
+        var dhcpChanged =
+            startIP !== (lanBase.StartIPAddress || '') ||
+            newEndIP !== (lanBase.EndIPAddress || '') ||
+            String(leaseHours) !== String(parseInt(lanBase.DHCPLeaseTime, 10) || '');
+
+        var doSave = function() {
+            App.wrapFormSubmit('#lan-panel-save', function() {
+                var chain = API.cgiPost('dns.cgi', dnsPayload);
+                if (dhcpChanged) {
+                    var params = _lanPayload({
+                        StartIPAddress: startIP,
+                        EndIPAddress: newEndIP,
+                        DHCPLeaseTime: leaseHours
+                    });
+                    delete params.DNSMode;
+                    delete params.DNSAddress1;
+                    delete params.DNSAddress2;
+                    chain = chain.then(function() { return API.webapi('SetLanSettings', params); });
+                }
+                return chain.then(function() {
+                    _hidePanel();
+                    return _loadLan();
+                });
+            }, dhcpChanged
+                ? { pending: 'Saving…', success: 'Saved. The router is rebooting to apply DHCP changes.' }
+                : { success: 'DNS settings applied' });
+        };
+
+        if (dhcpChanged) {
+            App.confirmDialog(
+                'Changing the DHCP pool reboots the router. DNS changes apply instantly, without a reboot. Continue?',
+                doSave, null,
+                { title: 'Reboot required', confirmText: 'Save & reboot' });
+        } else {
+            doSave();
+        }
     }
 
     function _showPanel(title, fieldsHTML, onSave) {

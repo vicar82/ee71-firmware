@@ -101,11 +101,10 @@
                 API.cgiGet('signal.cgi', { action: 'ca' }).then(function(ca) {
                     if (!el('m-band')) return;
                     if (ca && ca.ca && ca.bands && ca.bands.length > 1) {
-                        // $QCRSRP mixes serving + SCC + neighbor cells. The NV CA
-                        // config on this modem caps at 2CC, so 3+ "bands" here are
-                        // neighbor cells, not aggregation — label them honestly.
+                        // $QCRSRP mixes serving + SCC + neighbor cells. With Cat9
+                        // NV config genuine 3CC is possible; 4+ "bands" are neighbors.
                         var label = ca.bands.map(function(b) { return 'B' + b; }).join('+');
-                        if (ca.bands.length > 2) label += ' (≤2CC CA; остальное — соседние ячейки)';
+                        if (ca.bands.length > 3) label += ' (≤3CC CA; остальное — соседние ячейки)';
                         el('m-band').textContent = label;
                         if (el('m-earfcn') && ca.cells && ca.cells.length) {
                             var pcc = ca.cells[0];
