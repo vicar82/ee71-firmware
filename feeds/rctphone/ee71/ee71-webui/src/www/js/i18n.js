@@ -21,7 +21,7 @@
             'nav.apn': 'APN', 'nav.at-terminal': 'AT Terminal', 'nav.mobile-settings': 'Settings',
             'nav.sms': 'SMS', 'nav.ussd': 'USSD', 'nav.bands': 'Bands', 'nav.wifi': 'WiFi',
             'nav.lan': 'LAN', 'nav.firewall': 'Firewall', 'nav.upnp': 'UPnP', 'nav.ttl-fix': 'TTL Fix',
-            'nav.vpn': 'VPN', 'nav.diagnostics': 'Diagnostics', 'nav.speedtest': 'Speed Test',
+            'nav.vpn': 'VPN', 'nav.power': 'Power', 'nav.diagnostics': 'Diagnostics', 'nav.speedtest': 'Speed Test',
             'nav.settings': 'Settings', 'nav.ssh': 'SSH', 'nav.backup': 'Backup', 'nav.about': 'About',
 
             'login.title': 'Sign in', 'login.password': 'Password', 'login.submit': 'Sign in',
@@ -48,13 +48,14 @@
             'ussd.balance': 'Balance', 'ussd.traffic': 'Traffic left', 'ussd.number': 'My number',
 
             'bands.title': 'LTE band lock',
-            'bands.hint': 'On this modem AT$QCBANDPREF only covers 2G/3G — it has no LTE bands at all. Real LTE band lock needs the QMI backend (in development); the checkboxes will come alive when it lands.',
-            'bands.pending': 'QMI backend in development',
-            'bands.note3g': 'Note: this modem replies to AT$QCBANDPREF with a 3GPP2-era band list (CDMA/GSM/WCDMA only) — there is no LTE band preference behind this command.',
-            'bands.read': 'Read current', 'bands.lock': 'Apply lock', 'bands.all': 'All bands',
+            'bands.hint2': 'Change applies right away when the modem accepts it; otherwise it is stored and takes effect after a reboot. If the selected bands have no coverage, the device loses service until you revert to "All bands".',
+            'bands.pending': 'Applying…',
+            'bands.read': 'Read current', 'bands.lock': 'Apply lock', 'bands.auto': 'All bands',
             'bands.current': 'Current preference', 'bands.select': 'Allowed bands',
-            'bands.command': 'Mask to apply', 'bands.custom': 'Custom AT command',
-            'bands.warn': 'Band lock will be applied immediately. If the selected bands have no coverage, the device loses service until you revert to "All bands". Continue?'
+            'bands.appliedLive': 'Applied immediately.',
+            'bands.needReboot': 'The modem rejected a live change (it is registered). The mask is stored — power-cycle to apply it.',
+            'bands.coldboot': 'To apply:\n1. Power off the router.\n2. Remove the battery for 30 seconds.\n3. Re-insert the battery and power on.\nThe mask applies during boot.',
+            'bands.rebooting': 'Rebooting… wait a minute and refresh the page.'
         },
         ru: {
             'nav.status': 'СТАТУС', 'nav.mobile': 'СОТОВАЯ СЕТЬ', 'nav.network': 'СЕТЬ', 'nav.system': 'СИСТЕМА',
@@ -62,7 +63,7 @@
             'nav.apn': 'APN', 'nav.at-terminal': 'AT-терминал', 'nav.mobile-settings': 'Настройки',
             'nav.sms': 'SMS', 'nav.ussd': 'USSD', 'nav.bands': 'Диапазоны', 'nav.wifi': 'WiFi',
             'nav.lan': 'LAN', 'nav.firewall': 'Файрвол', 'nav.upnp': 'UPnP', 'nav.ttl-fix': 'TTL-фикс',
-            'nav.vpn': 'VPN', 'nav.diagnostics': 'Диагностика', 'nav.speedtest': 'Тест скорости',
+            'nav.vpn': 'VPN', 'nav.diagnostics': 'Диагностика', 'nav.power': 'Питание', 'nav.speedtest': 'Тест скорости',
             'nav.settings': 'Настройки', 'nav.ssh': 'SSH', 'nav.backup': 'Бэкап', 'nav.about': 'О программе',
 
             'login.title': 'Вход', 'login.password': 'Пароль', 'login.submit': 'Войти',
@@ -89,13 +90,14 @@
             'ussd.balance': 'Баланс', 'ussd.traffic': 'Остаток трафика', 'ussd.number': 'Мой номер',
 
             'bands.title': 'Блокировка LTE-диапазонов',
-            'bands.hint': 'На этом модеме AT$QCBANDPREF покрывает только 2G/3G — LTE-диапазонов в нём нет. Настоящая блокировка LTE требует QMI-бэкенда (в разработке); чекбоксы оживут, когда он появится.',
-            'bands.pending': 'QMI-бэкенд в разработке',
-            'bands.note3g': 'Примечание: модем отвечает на AT$QCBANDPREF списком диапазонов эпохи 3GPP2 (CDMA/GSM/WCDMA) — за этой командой нет LTE-предпочтений.',
-            'bands.read': 'Прочитать текущее', 'bands.lock': 'Применить блокировку', 'bands.all': 'Все диапазоны',
+            'bands.hint2': 'Изменение применяется сразу, если модем принимает его; иначе маска сохраняется и вступит в силу после перезагрузки. Если выбранные диапазоны не ловятся в вашей зоне, связь пропадёт, пока не вернёте «Все диапазоны».',
+            'bands.pending': 'Применяю…',
+            'bands.read': 'Прочитать текущее', 'bands.lock': 'Применить блокировку', 'bands.auto': 'Все диапазоны',
             'bands.current': 'Текущие предпочтения', 'bands.select': 'Разрешённые диапазоны',
-            'bands.command': 'Маска к применению', 'bands.custom': 'Своя AT-команда',
-            'bands.warn': 'Блокировка применится сразу. Если выбранные диапазоны не ловятся в вашей зоне, связь пропадёт, пока не вернёте «Все диапазоны». Продолжить?'
+            'bands.appliedLive': 'Применено сразу.',
+            'bands.needReboot': 'Модем отклонил смену «на лету» (зарегистрирован). Маска сохранена — применится при перезапуске.',
+            'bands.coldboot': 'Для применения:\n1. Выключи роутер.\n2. Вытащи батарею на 30 секунд.\n3. Вставь батарею и включи роутер.\nМаска применится при загрузке.',
+            'bands.rebooting': 'Перезагрузка… подождите минуту и обновите страницу.'
         }
     };
 

@@ -14,6 +14,7 @@ import './pages/connection.js';
 import './pages/apn.js';
 import './pages/at-terminal.js';
 import './pages/clients.js';
+import './pages/power.js';
 import './pages/wifi.js';
 import './pages/lan.js';
 import './pages/firewall.js';

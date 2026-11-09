@@ -522,6 +522,7 @@ var App = (function() {
         { id: 'ttl-fix',      icon: 'ic-firewall',   label: 'TTL Fix' },
         { id: 'vpn',          icon: 'ic-vpn',        label: 'VPN' },
         { id: 'diagnostics',  icon: 'ic-diag',       label: 'Diagnostics' },
+        { id: 'power',      icon: 'ic-power',      label: 'Power' },
         { id: 'speedtest',    icon: 'ic-speedtest',  label: 'Speed Test' },
         { id: 'settings',     icon: 'ic-settings',   label: 'Settings' },
         { id: 'ssh',          icon: 'ic-terminal',   label: 'SSH' },
@@ -530,7 +531,7 @@ var App = (function() {
     ];
 
     var NAV_GROUPS = [
-        { label: 'STATUS',   icon: 'ic-dashboard', items: ['dashboard', 'clients'] },
+        { label: 'STATUS',   icon: 'ic-dashboard', items: ['dashboard', 'clients', 'power'] },
         { label: 'MOBILE',   icon: 'ic-mobile',    items: ['connection', 'sms', 'mobile-settings', 'bands'] },
         { label: 'NETWORK',  icon: 'ic-wifi',      items: ['wifi', 'lan', 'firewall', 'upnp', 'ttl-fix'] },
         { label: 'SYSTEM',   icon: 'ic-settings',  items: ['diagnostics', 'speedtest', 'settings', 'ssh', 'backup', 'about'] },
