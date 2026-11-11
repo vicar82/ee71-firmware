@@ -19,7 +19,8 @@
                 '<div class="stat-row"><span class="label">MAC Address</span><span class="value" id="a-mac">\u2014</span></div>' +
                 '<div class="stat-row"><span class="label">Uptime</span><span class="value" id="a-uptime">\u2014</span></div>' +
                 '<div class="stat-row"><span class="label">Kernel</span><span class="value" id="a-kernel">\u2014</span></div>' +
-                '<div class="stat-row"><span class="label">Web UI</span><span class="value">Rctphone UI v1.0</span></div>' +
+                '<div class="stat-row"><span class="label">Web UI</span><span class="value">Custom Firmware v1.3 · github.com/vicar82/ee71-firmware</span></div>' +
+                '<div class="stat-row"><span class="label">Base</span><span class="value">Rctphone UI (rctphone/Entware-EE71-glibc2.17)</span></div>' +
             '</div>' +
             '<div class="card mt-2">' +
                 '<h3>Storage</h3>' +
