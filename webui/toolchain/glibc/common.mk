@@ -1,0 +1,126 @@
+#
+# Copyright (C) 2006-2020 OpenWrt.org
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+# XXX Entware specific: keep versions 2.23/2.27
+
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=glibc
+PKG_VERSION:=$(call qstrip,$(CONFIG_GLIBC_VERSION))
+PKG_RELEASE:=1
+
+PKG_SOURCE_URL:=@GNU/glibc
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+PKG_CPE_ID:=cpe:/a:gnu:glibc
+
+ifeq ($(PKG_VERSION),2.17)
+  PKG_HASH:=80f5acd0bbc573ad80579ae98c789143c75f13fb39e4dbd2449c086774b8315c
+endif
+
+ifeq ($(PKG_VERSION),2.23)
+  PKG_HASH:=f39f068ce7d749608ff15182b7da28627dd129eaba2687e28bec876d26135629
+endif
+
+ifeq ($(PKG_VERSION),2.27)
+  PKG_HASH:=e49c919c83579984f7c2442243861d04227e8dc831a08d7bf60cdacfdcd08797
+endif
+
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+HOST_BUILD_DIR:=$(BUILD_DIR_TOOLCHAIN)/$(PKG_SOURCE_SUBDIR)
+CUR_BUILD_DIR:=$(HOST_BUILD_DIR)-$(VARIANT)
+PATCH_DIR:=$(PATH_PREFIX)/patches/$(PKG_VERSION)
+
+include $(INCLUDE_DIR)/toolchain-build.mk
+
+HOST_STAMP_PREPARED:=$(HOST_BUILD_DIR)/.prepared
+HOST_STAMP_CONFIGURED:=$(CUR_BUILD_DIR)/.configured
+HOST_STAMP_BUILT:=$(CUR_BUILD_DIR)/.built
+HOST_STAMP_INSTALLED:=$(TOOLCHAIN_DIR)/stamp/.glibc_$(VARIANT)_installed
+
+ifeq ($(ARCH),mips64)
+  ifdef CONFIG_MIPS64_ABI_N64
+    TARGET_CFLAGS += -mabi=64
+  endif
+  ifdef CONFIG_MIPS64_ABI_N32
+    TARGET_CFLAGS += -mabi=n32
+  endif
+  ifdef CONFIG_MIPS64_ABI_O32
+    TARGET_CFLAGS += -mabi=32
+  endif
+endif
+
+# -Os miscompiles w. 2.24 gcc5/gcc6
+# only -O2 tested by upstream changeset
+# "Optimize i386 syscall inlining for GCC 5"
+#
+# glibc 2.17 needs extra warning suppression when built with GCC 8+
+# (same flags used by crosstool-ng 1.26.0 for glibc 2.17)
+GLIBC_2_17_EXTRA_CFLAGS:=$(if $(CONFIG_GLIBC_USE_VERSION_2_17), \
+	-Wno-missing-attributes -Wno-array-bounds -Wno-array-parameter \
+	-Wno-stringop-overflow -Wno-maybe-uninitialized)
+
+GLIBC_CONFIGURE:= \
+	unset LD_LIBRARY_PATH; \
+	BUILD_CC="$(HOSTCC)" \
+	$(TARGET_CONFIGURE_OPTS) \
+	CFLAGS="-O2 $(filter-out -O%,$(call qstrip,$(TARGET_CFLAGS))) $(GLIBC_2_17_EXTRA_CFLAGS)" \
+	libc_cv_slibdir="/lib" \
+	use_ldconfig=no \
+	$(HOST_BUILD_DIR)/$(GLIBC_PATH)configure \
+		--prefix= \
+		--build=$(GNU_HOST_NAME) \
+		--host=$(REAL_GNU_TARGET_NAME) \
+		--with-headers=$(TOOLCHAIN_DIR)/include \
+		--disable-profile \
+		--disable-werror \
+		--without-gd \
+		--without-cvs \
+		--enable-add-ons \
+		--$(if $(CONFIG_SOFT_FLOAT),without,with)-fp \
+		  $(if $(CONFIG_PKG_CC_STACKPROTECTOR_REGULAR),--enable-stack-protector=yes) \
+		  $(if $(CONFIG_PKG_CC_STACKPROTECTOR_STRONG),--enable-stack-protector=strong) \
+		  $(if $(CONFIG_PKG_CC_STACKPROTECTOR_ALL),--enable-stack-protector=all) \
+		  $(if $(CONFIG_PKG_RELRO_FULL),--enable-bind-now) \
+		  $(if $(CONFIG_GLIBC_USE_VERSION_2_17),--enable-obsolete-rpc) \
+		  $(if $(CONFIG_GLIBC_USE_VERSION_2_23),--enable-obsolete-rpc) \
+		  $(if $(CONFIG_GLIBC_USE_VERSION_2_27),--enable-obsolete-rpc) \
+		  $(if $(CONFIG_GLIBC_USE_VERSION_2_27),--enable-obsolete-nsl) \
+		  $(if $(CONFIG_PKG_FORTIFY_SOURCE_1),--enable-fortify-source=1) \
+		  $(if $(CONFIG_PKG_FORTIFY_SOURCE_2),--enable-fortify-source=2) \
+		  $(if $(CONFIG_PKG_FORTIFY_SOURCE_3),--enable-fortify-source=3)
+
+export libc_cv_ssp=no
+export libc_cv_ssp_strong=no
+export ac_cv_header_cpuid_h=yes
+export HOST_CFLAGS := $(HOST_CFLAGS) -idirafter $(CURDIR)/$(PATH_PREFIX)/include
+
+define Host/SetToolchainInfo
+	$(SED) 's,^\(LIBC_TYPE\)=.*,\1=$(PKG_NAME),' $(TOOLCHAIN_DIR)/info.mk
+	$(SED) 's,^\(LIBC_URL\)=.*,\1=http://www.gnu.org/software/libc/,' $(TOOLCHAIN_DIR)/info.mk
+	$(SED) 's,^\(LIBC_VERSION\)=.*,\1=$(PKG_VERSION),' $(TOOLCHAIN_DIR)/info.mk
+	$(SED) 's,^\(LIBC_SO_VERSION\)=.*,\1=$(PKG_VERSION),' $(TOOLCHAIN_DIR)/info.mk
+endef
+
+define Host/Configure
+	mkdir -p $(CUR_BUILD_DIR)
+	( cd $(CUR_BUILD_DIR); rm -f config.cache; \
+		$(GLIBC_CONFIGURE) \
+	);
+endef
+
+define Host/Prepare
+	$(call Host/Prepare/Default)
+	for f in $(PATCH_DIR).$(ARCH)/*.patch; do \
+		patch -p1 -d $(HOST_BUILD_DIR) < $$$$f; \
+	done; \
+	ln -snf $(PKG_SOURCE_SUBDIR) $(BUILD_DIR_TOOLCHAIN)/$(PKG_NAME)
+endef
+
+define Host/Clean
+	rm -rf $(CUR_BUILD_DIR)* \
+		$(BUILD_DIR_TOOLCHAIN)/$(LIBC)-dev \
+		$(BUILD_DIR_TOOLCHAIN)/$(PKG_NAME)
+endef

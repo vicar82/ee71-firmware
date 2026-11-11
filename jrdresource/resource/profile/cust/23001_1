@@ -1,0 +1,5 @@
+name:T-Mobile Internet
+apn:internet.t-mobile.cz
+protocol:1
+user:wap
+psw:wap

@@ -1,0 +1,1 @@
+../init.d/rmt_storage.sh

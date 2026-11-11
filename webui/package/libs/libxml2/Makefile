@@ -1,0 +1,255 @@
+# Entware specifics: added -DHAVE_GETENTROPY=OFF
+# Based on Entware commit c04cb877 (2.13.6 structure)
+#
+# EE71: pinned to 2.13.9, the last release with SONAME libxml2.so.2, and 2.13.9
+# is the end of that series — there is nothing left to bump to inside it.
+#
+# This package is not an addition to the firmware, it is a replacement: the
+# stock system ships /usr/lib/libxml2.so.2 -> libxml2.so.2.9.1, and this
+# package's only payload is /usr/lib/libxml2.so.2 plus its real file, so
+# installing it overwrites the OEM library in place. The stock daemon
+# /usr/bin/ipacm, started at boot by /etc/init.d/start_ipacm_le, has
+# libxml2.so.2 in its DT_NEEDED; so does /usr/bin/xmllint.
+#
+# From 2.14 upstream bumped the SONAME to libxml2.so.16. A 2.14+ package would
+# therefore ship libxml2.so.16 and NOT libxml2.so.2 — and because opkg deletes
+# the old version's files on upgrade, and the file it would delete is the one
+# that clobbered the OEM symlink, the upgrade leaves the device with no
+# libxml2.so.2 at all and ipacm stops loading. Nothing is bought in exchange:
+# no package in this feed depends on libxml2 at runtime (gettext-full lists it
+# only as PKG_BUILD_DEPENDS, and gettext-full is not selected).
+#
+# So: do not move to 2.14/2.15 as a version bump.
+#
+# Retiring the package is a coherent alternative, but NOT on the wording above:
+# on the live router the OEM library is already gone. Checked there rather than
+# assumed — /usr/lib/libxml2.so.2 is a regular 999232-byte file dated
+# 2026-02-16 (our build), there is no libxml2.so.2.9.1 beside it, and the
+# firmware dump's own copy is 1140156 bytes. So removing the package does not
+# hand the device back "its own untouched 2.9.1"; that would take restoring the
+# file out of the firmware image.
+#
+# Worse, opkg cannot do it either way: the device's libxml2 entry is one of the
+# pre-registered claims — Essential: yes with a ZERO-BYTE .list — so opkg owns
+# no files to delete and refuses a same-version reinstall. The library was put
+# there outside opkg's tracking. /usr/bin/ipacm is running against it right now.
+#
+# That also makes this the sharpest worked example for the pre-registered
+# package mechanism: the claim "the firmware already provides libxml2.so.2" is
+# TRUE of the firmware and the file is present on the device — but the file
+# present is ours, not the firmware's. A detector that asks "does this path
+# exist on the device" answers yes for the wrong reason.
+
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=libxml2
+PKG_VERSION:=2.13.9
+PKG_RELEASE:=1
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE_URL:=@GNOME/libxml2/$(basename $(PKG_VERSION))
+PKG_HASH:=a2c9ae7b770da34860050c309f903221c67830c86e4a7e760692b803df95143a
+
+PKG_LICENSE:=MIT
+PKG_LICENSE_FILES:=COPYING
+PKG_CPE_ID:=cpe:/a:xmlsoft:libxml2
+HOST_BUILD_DEPENDS := libiconv-full/host
+PKG_FLAGS:=essential
+
+include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/cmake.mk
+include $(INCLUDE_DIR)/nls.mk
+
+define Package/libxml2
+  SECTION:=libs
+  CATEGORY:=Libraries
+  TITLE:=Gnome XML library
+  URL:=http://xmlsoft.org/
+  DEPENDS:=+libpthread +zlib $(ICONV_DEPENDS)
+endef
+
+define Package/libxml2/description
+ A library for manipulating XML and HTML resources.
+endef
+
+define Package/libxml2-dev
+  SECTION:=devel
+  CATEGORY:=Development
+  SUBMENU:=Libraries
+  TITLE:=Development files for libxml2
+  URL:=http://xmlsoft.org/
+  DEPENDS:=+libxml2
+endef
+
+define Package/libxml2-dev/description
+  A library for manipulating XML and HTML resources.
+
+  This package contains the headers and xml2-config binary.
+endef
+
+define Package/libxml2-utils
+  SECTION:=utils
+  CATEGORY:=Utilities
+  TITLE:=XML command line utilities (xmllint...)
+  URL:=http://xmlsoft.org/
+  DEPENDS:=+libxml2
+endef
+
+define Package/libxml2-utils/description
+  This package contains the binaries xmllint and xmlcatalog
+  from libxml2, a library for manipulating XML and HTML resources.
+endef
+
+CMAKE_HOST_OPTIONS += \
+	-DBUILD_SHARED_LIBS=OFF \
+	-DLIBXML2_WITH_C14N=ON \
+	-DLIBXML2_WITH_CATALOG=OFF \
+	-DLIBXML2_WITH_DEBUG=ON \
+	-DLIBXML2_WITH_FTP=OFF \
+	-DLIBXML2_WITH_HTML=ON \
+	-DLIBXML2_WITH_HTTP=OFF \
+	-DLIBXML2_WITH_ICONV=ON \
+	-DLIBXML2_WITH_ICU=OFF \
+	-DLIBXML2_WITH_ISO8859X=OFF \
+	-DLIBXML2_WITH_LEGACY=OFF \
+	-DLIBXML2_WITH_LZMA=OFF \
+	-DLIBXML2_WITH_MEM_DEBUG=OFF \
+	-DLIBXML2_WITH_MODULES=OFF \
+	-DLIBXML2_WITH_OUTPUT=ON \
+	-DLIBXML2_WITH_PATTERN=ON \
+	-DLIBXML2_WITH_PROGRAMS=OFF \
+	-DLIBXML2_WITH_PUSH=ON \
+	-DLIBXML2_WITH_PYTHON=OFF \
+	-DLIBXML2_WITH_READER=ON \
+	-DLIBXML2_WITH_REGEXPS=ON \
+	-DLIBXML2_WITH_RUN_DEBUG=OFF \
+	-DLIBXML2_WITH_SAX1=ON \
+	-DLIBXML2_WITH_SCHEMAS=ON \
+	-DLIBXML2_WITH_SCHEMATRON=OFF \
+	-DLIBXML2_WITH_TESTS=OFF \
+	-DLIBXML2_WITH_THREADS=ON \
+	-DLIBXML2_WITH_THREAD_ALLOC=OFF \
+	-DLIBXML2_WITH_TREE=ON \
+	-DLIBXML2_WITH_VALID=ON \
+	-DLIBXML2_WITH_WRITER=ON \
+	-DLIBXML2_WITH_XINCLUDE=ON \
+	-DLIBXML2_WITH_XPATH=ON \
+	-DLIBXML2_WITH_XPTR=ON \
+	-DLIBXML2_WITH_XPTR_LOCS=ON \
+	-DLIBXML2_WITH_ZLIB=ON
+
+CMAKE_OPTIONS += \
+	-DBUILD_SHARED_LIBS=ON \
+	-DLIBXML2_WITH_C14N=ON \
+	-DLIBXML2_WITH_CATALOG=OFF \
+	-DLIBXML2_WITH_DEBUG=ON \
+	-DLIBXML2_WITH_FTP=OFF \
+	-DLIBXML2_WITH_HTML=ON \
+	-DLIBXML2_WITH_HTTP=OFF \
+	-DLIBXML2_WITH_ICONV=ON \
+	-DLIBXML2_WITH_ICU=OFF \
+	-DLIBXML2_WITH_ISO8859X=OFF \
+	-DLIBXML2_WITH_LEGACY=OFF \
+	-DLIBXML2_WITH_LZMA=OFF \
+	-DLIBXML2_WITH_MEM_DEBUG=OFF \
+	-DLIBXML2_WITH_MODULES=OFF \
+	-DLIBXML2_WITH_OUTPUT=ON \
+	-DLIBXML2_WITH_PATTERN=ON \
+	-DLIBXML2_WITH_PROGRAMS=ON \
+	-DLIBXML2_WITH_PUSH=ON \
+	-DLIBXML2_WITH_PYTHON=OFF \
+	-DLIBXML2_WITH_READER=ON \
+	-DLIBXML2_WITH_REGEXPS=ON \
+	-DLIBXML2_WITH_RUN_DEBUG=OFF \
+	-DLIBXML2_WITH_SAX1=ON \
+	-DLIBXML2_WITH_SCHEMAS=ON \
+	-DLIBXML2_WITH_SCHEMATRON=OFF \
+	-DLIBXML2_WITH_TESTS=OFF \
+	-DLIBXML2_WITH_THREADS=ON \
+	-DLIBXML2_WITH_THREAD_ALLOC=OFF \
+	-DLIBXML2_WITH_TREE=ON \
+	-DLIBXML2_WITH_VALID=ON \
+	-DLIBXML2_WITH_WRITER=ON \
+	-DLIBXML2_WITH_XINCLUDE=ON \
+	-DLIBXML2_WITH_XPATH=ON \
+	-DLIBXML2_WITH_XPTR=ON \
+	-DLIBXML2_WITH_XPTR_LOCS=ON \
+	-DLIBXML2_WITH_ZLIB=ON \
+	-DHAVE_LIBHISTORY=OFF \
+	-DHAVE_LIBREADLINE=OFF \
+	-DHAVE_GETENTROPY=OFF
+
+define Build/InstallDev
+	$(INSTALL_DIR) $(2)/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/xml2-config \
+		$(2)/bin/$(GNU_TARGET_NAME)-xml2-config
+	$(SED) 's,^\(prefix\|exec_prefix\)=.*,\1=$(STAGING_DIR)/usr,g' \
+		$(2)/bin/$(GNU_TARGET_NAME)-xml2-config
+	$(LN) $(GNU_TARGET_NAME)-xml2-config $(2)/bin/xml2-config
+
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/xmlcatalog $(1)/usr/bin/
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/xmllint $(1)/usr/bin/
+
+	$(INSTALL_DIR) $(1)/usr/include
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/libxml2 $(1)/usr/include/
+
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libxml2.so* $(1)/usr/lib/
+
+	$(INSTALL_DIR) $(1)/usr/lib/cmake/libxml2
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/cmake/libxml2-$(PKG_VERSION)/*.cmake \
+		$(1)/usr/lib/cmake/libxml2
+
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libxml-2.0.pc $(1)/usr/lib/pkgconfig/
+
+	$(INSTALL_DIR) $(2)/share/aclocal/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/share/aclocal/* $(2)/share/aclocal
+endef
+
+define Host/Install
+	$(call Host/Install/Default)
+	mv $(1)/bin/xml2-config $(1)/bin/$(GNU_HOST_NAME)-xml2-config
+	$(LN) $(GNU_HOST_NAME)-xml2-config $(1)/bin/xml2-config
+endef
+
+define Package/libxml2/install
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libxml2.so.* $(1)/usr/lib/
+endef
+
+define Package/libxml2-dev/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/xml2-config $(1)/usr/bin/
+	$(SED) "s,$(STAGING_DIR),,g" $(1)/usr/bin/xml2-config
+
+	$(INSTALL_DIR) $(1)/usr/include/
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/* $(1)/usr/include/
+
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libxml2.so $(1)/usr/lib/
+
+	$(INSTALL_DIR) $(1)/usr/lib/{cmake,pkgconfig}
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/{cmake,pkgconfig} $(1)/usr/lib/
+	$(SED) "s,$(STAGING_DIR),,g" $(1)/usr/lib/pkgconfig/*.pc
+
+	$(INSTALL_DIR) $(1)/usr/share/aclocal
+	$(CP) $(PKG_INSTALL_DIR)/usr/share/aclocal/* $(1)/usr/share/aclocal
+
+	# XXX Entware specific: fix paths
+	$(SED) 's,/lib/libiconv-full,,g' \
+		$(1)/usr/bin/xml2-config $(1)/usr/lib/pkgconfig/*.pc
+endef
+
+define Package/libxml2-utils/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/xmllint $(1)/usr/bin/
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/xmlcatalog $(1)/usr/bin/
+endef
+
+$(eval $(call HostBuild))
+$(eval $(call BuildPackage,libxml2))
+$(eval $(call BuildPackage,libxml2-dev))
+$(eval $(call BuildPackage,libxml2-utils))

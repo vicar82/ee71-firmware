@@ -1,0 +1,7 @@
+/jrd/webapi
+/cfgbak/configure.bin
+/default.html
+/index.html
+/favicon.ico
+/redirect_error.html
+/reopen_browser.html

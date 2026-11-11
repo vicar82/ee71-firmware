@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<ecnemgmttree xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ecneandsf.xsd">
+  <VerDTD>1.0</VerDTD>
+  <Man>QTI</Man>
+  <Mod>MDM9x35</Mod>
+  <ANDSF>
+    <IARP>
+      <ForInterAPNRouting>
+        <X>
+          <!--Default routing. Do not remove-->
+          <IPFlow>
+            <AddressType>IPv4</AddressType>
+            <StartSourceIPaddress>0.0.0.0</StartSourceIPaddress>
+            <EndSourceIPaddress>0.0.0.0</EndSourceIPaddress>
+          </IPFlow>
+          <RoutingRule>
+            <APN>default</APN>
+            <APNPriority>1</APNPriority>
+          </RoutingRule>
+          <RulePriority>2</RulePriority>
+          <!--End default routing.-->
+        </X>
+      </ForInterAPNRouting>
+      <ForNonSeamlessOffload>
+        <!--Default routing. Do not remove-->
+        <X>
+          <IPFlow>
+            <AddressType>IPv4</AddressType>
+            <StartSourceIPaddress>0.0.0.0</StartSourceIPaddress>
+            <EndSourceIPaddress>0.0.0.0</EndSourceIPaddress>
+          </IPFlow>
+          <RoutingRule>
+            <!--Exclude AccessId field for the rule to apply to all ssids
+            <AccessId>ssid1</AccessId>
+            -->
+            <AccessNetworkPriority>1</AccessNetworkPriority>
+          </RoutingRule>
+          <RulePriority>1</RulePriority>
+        </X>
+        <!--End default routing.-->
+        <!-- Sample Forbidden Flow
+        <X>
+          <IPFlow>
+            <AddressType>IPv4</AddressType>
+            <StartSourceIPaddress>10.0.0.1</StartSourceIPaddress>
+            <EndSourceIPaddress>10.0.0.2</EndSourceIPaddress>
+            <ProtocolType>6</ProtocolType>
+            <StartSourcePortNumber>443</StartSourcePortNumber>
+            <EndSourcePortNumber>444</EndSourcePortNumber>
+          </IPFlow>
+          <RoutingRule>
+            <AccessNetworkPriority>1</AccessNetworkPriority>
+          </RoutingRule>
+          <RulePriority>1</RulePriority>
+        </X>
+        End Sample Forbidden Flow-->
+      </ForNonSeamlessOffload>
+    </IARP>
+    <Ext>
+        <FeatureEnabled>false</FeatureEnabled>
+        <CQE prodId="Rome">
+            <!-- Default node for CQE_Thresholds element -->
+            <CQE_Thresholds Id ="128">
+                <!-- RSSI threshold from which all values greather than it is considered as good for wlan to be -->
+                <!-- a candidate for interface selection -->
+                <RSSIAddThreshold units="dbm">-86</RSSIAddThreshold>
+                <!-- RSSI threshold from which all values lesser than it is considered as bad for wlan to be -->
+                <!-- a candidate for interface selection -->
+                <RSSIDropThreshold units="dbm">-91</RSSIDropThreshold>
+                <!-- Interval over whcih RSSI values are averaged -->
+                <RSSIAveragingInterval units="secs">5</RSSIAveragingInterval>
+                <!-- RSSI threshold below which MAC hysteresis timer is not started -->
+                <RSSIMacTimerThreshold units="dbm">-91</RSSIMacTimerThreshold>
+                <!-- Periodic timer to evaluate CQE parameters including RSSI and MAC stats -->
+                <!-- Setting CQETimer to zero disables the CQE -->
+                <CQETimer units="secs">2</CQETimer>
+                <!-- Time for which CQE is not reevaluted after it was declared bad due to MAC stats -->
+                <MACHysteresisTimer units="secs">120</MACHysteresisTimer>
+                <!-- Alpha to compute RSSI averaging based on IIR filtering mechanism -->
+                <MACStatsAveragingAlpha>0.5</MACStatsAveragingAlpha>
+                <!-- Threshold for RX MPDU PER -->
+                <RMP_THR>0.3</RMP_THR>
+                <!-- Minimum MPDU count to activate RX MPDU PER -->
+                <RMP_CNT_THR>10</RMP_CNT_THR>
+                <!-- Cutoff RX MCS index -->
+                <RX_MCS_THR>1</RX_MCS_THR>
+                <!-- Cutoff RX BW index -->
+                <RX_BW_THR>2</RX_BW_THR>
+                <!-- Threshold for TX MSDU drop -->
+                <TMD_THR>0.1</TMD_THR>
+                <!-- Minimum MSDU count to activate TX MSDU drop -->
+                <TMD_CNT_THR>2</TMD_CNT_THR>
+                <!-- Threshold for MPDU retry rate -->
+                <TMR_THR>0.7</TMR_THR>
+                <!-- Minimum MPDU count to activate MPDU retry rate -->
+                <TMR_CNT_THR>4</TMR_CNT_THR>
+                <!-- Cutoff TX MCS index -->
+                <TX_MCS_THR>5</TX_MCS_THR>
+                <!-- Cutoff TX BW index -->
+                <TX_BW_THR>6</TX_BW_THR>
+            </CQE_Thresholds>
+        </CQE>
+    </Ext>
+  </ANDSF>
+</ecnemgmttree>

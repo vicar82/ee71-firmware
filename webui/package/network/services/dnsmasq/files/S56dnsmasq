@@ -1,0 +1,10 @@
+#!/bin/sh
+
+ENABLED=yes
+PROCS=dnsmasq
+ARGS=""
+PREARGS=""
+DESC=$PROCS
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+. /etc/init.d/rc.func

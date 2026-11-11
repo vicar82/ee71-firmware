@@ -1,0 +1,28 @@
+#!/bin/sh
+
+echo 3 > /proc/sys/vm/drop_caches
+
+case "$1" in
+  core_app)
+        killall -9 core_app
+        start-stop-daemon -S -b -o -a /usr/oem/core_app
+        echo "done"
+        ;;
+  webs)
+        killall -9 webs
+        start-stop-daemon -S -b -o -a /usr/oem/webs   
+        echo "done"
+        ;;
+  both)
+        killall -9 core_app
+        killall -9 webs
+        start-stop-daemon -S -b -o -a /usr/oem/core_app
+        start-stop-daemon -S -b -o -a /usr/oem/webs   
+        ;;
+  *)
+        echo "Usage restart_core_app_webs { core_app | webs | both}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

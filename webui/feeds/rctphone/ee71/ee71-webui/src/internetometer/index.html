@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Интернетометр</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h2>Интернетометр</h2>
+<button id="go">Измерить</button>
+<div id="status"></div>
+<div id="err"></div>
+<div id="results">
+  <div class="big"><span id="dl">0</span> <small>Мбит/с</small></div>
+  <div class="lbl">скорость получения</div>
+  <div class="row"><span>Отдача</span><span class="v"><span id="ul">—</span> Мбит/с</span></div>
+  <div class="row"><span>Пинг</span><span class="v"><span id="pg">—</span> мс</span></div>
+  <div class="row"><span>IP</span><span class="v" id="ip" style="font-weight:400">—</span></div>
+  <div class="row"><span>Сервер</span><span class="v" id="srv" style="font-weight:400">—</span></div>
+</div>
+<div id="meta"></div>
+<script src="app.js"></script>
+</body>
+</html>

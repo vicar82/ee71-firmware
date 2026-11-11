@@ -1,0 +1,5 @@
+name:Airtel Internet
+apn:internet.ng.zain.com
+dial:*99#
+user:internet
+psw:internet

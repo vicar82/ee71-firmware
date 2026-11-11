@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32px" height="32px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 61.2 (89653) - https://sketch.com -->
+    <title></title>
+    <desc>Created with Sketch.</desc>
+    <g id="ym-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="ic_battery25" transform="translate(1.000000, 8.000000)" fill="#009C9C" fill-rule="nonzero">
+            <path d="M29,4.92 L28,4.92 L28,2.72 C28,1.21778548 26.7822145,8.8817842e-16 25.28,8.8817842e-16 L2.72,8.8817842e-16 C1.21778548,8.8817842e-16 2.22044605e-16,1.21778548 2.22044605e-16,2.72 L2.22044605e-16,14.28 C2.22044605e-16,15.7822145 1.21778548,17 2.72,17 L25.28,17 C26.7822145,17 28,15.7822145 28,14.28 L28,12.08 L29,12.08 C29.3645079,12.08 29.66,11.7845079 29.66,11.42 L29.66,5.58 C29.66,5.21549207 29.3645079,4.92 29,4.92 Z M26,14.28 C26,14.677645 25.677645,15 25.28,15 L8,15 L8,2 L25.3,2 C25.697645,2 26.02,2.32235498 26.02,2.72 L26,14.28 Z" id="xz"></path>
+        </g>
+    </g>
+</svg>

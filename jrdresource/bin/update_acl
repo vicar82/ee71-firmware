@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ $# != 4 ] ; then
+	echo "USAGE: interface accept/deny file delay"
+	exit 1;
+fi
+
+sleep $4
+ebtables -F macfilter
+while read LINE
+do
+if [ $2 = 'accept' ] ; then
+	ebtables -A macfilter -s ${LINE:0:17} -j ACCEPT
+else
+	ebtables -A macfilter -s ${LINE:0:17} -j DROP
+fi
+done < $3
+
+if [ $2 = 'accept' ] ; then
+	ebtables -I macfilter -i ecm0 -j ACCEPT
+	ebtables -I macfilter -i rndis0 -j ACCEPT
+	ebtables -A macfilter -j DROP
+fi

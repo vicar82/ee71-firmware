@@ -1,0 +1,40 @@
+--- a/kexec/arch/arm64/crashdump-arm64.c
++++ b/kexec/arch/arm64/crashdump-arm64.c
+@@ -13,7 +13,7 @@
+ #define _GNU_SOURCE
+ 
+ #include <errno.h>
+-#include <linux/elf.h>
++#include <elf.h>
+ 
+ #include "kexec.h"
+ #include "crashdump.h"
+--- a/kexec/arch/arm64/kexec-arm64.c
++++ b/kexec/arch/arm64/kexec-arm64.c
+@@ -595,6 +595,7 @@ static int setup_2nd_dtb(struct dtb *dtb
+ 		 * have a valid random seed to pass to the
+ 		 * secondary kernel.
+ 		 */
++#if defined(__GLIBC__) && (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30)
+ 		result = syscall(SYS_getrandom, &fdt_val64,
+ 				sizeof(fdt_val64),
+ 				GRND_NONBLOCK);
+@@ -616,6 +617,7 @@ static int setup_2nd_dtb(struct dtb *dtb
+ 			dbgprintf("%s: Disabling KASLR in secondary kernel.\n",
+ 					__func__);
+ 		}
++#endif /* SYS_getrandom since glibc-2.30 */
+ 
+ 		nodeoffset = fdt_path_offset(new_buf, "/chosen");
+ 		result = fdt_setprop_inplace(new_buf,
+--- a/kexec/arch/arm64/kexec-elf-arm64.c
++++ b/kexec/arch/arm64/kexec-elf-arm64.c
+@@ -8,7 +8,7 @@
+ #include <fcntl.h>
+ #include <limits.h>
+ #include <stdlib.h>
+-#include <linux/elf.h>
++#include <elf.h>
+ 
+ #include "arch/options.h"
+ #include "crashdump-arm64.h"

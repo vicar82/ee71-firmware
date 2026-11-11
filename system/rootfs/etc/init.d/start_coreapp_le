@@ -1,0 +1,39 @@
+#! /bin/sh
+
+#set -e
+case "$1" in
+  start)
+    #start-stop-daemon -S -b -a QCMAP_ConnectionManager /etc/mobileap_cfg.xml d
+    #/jrd-resource/bin/core_app
+    
+    echo -n "Starting watch scripts: "
+    #webs will drop root priviledges after binding
+    #echo "0" > /jrd-resource/bin/qcmap_init_finish
+    start-stop-daemon -S -b -o -a /jrd-resource/bin/oem_watch
+    echo "done"
+    ;;
+  stop)
+    echo -n "Stopping core_app: "  
+    start-stop-daemon -K -n oem_watch
+    start-stop-daemon -K -n webs
+    start-stop-daemon -K -n core_app
+    #echo "0" > /jrd-resource/bin/qcmap_init_finish
+    #start-stop-daemon -K -n QCMAP_ConnectionManager
+    rm -rf /tmp/* /data/*
+    sync
+    echo "done"
+    ##stop scripts
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage core_app and webs { start | stop | restart }" >&2
+    exit 1
+    ;;
+esac
+echo "exit"
+
+#set +e
+exit 0

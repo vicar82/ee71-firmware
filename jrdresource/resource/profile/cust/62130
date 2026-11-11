@@ -1,0 +1,5 @@
+name:MTN Nigeria
+apn:web.gprs.mtnnigeria.net
+dial:*99#
+user:web
+psw:web

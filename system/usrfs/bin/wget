@@ -1,0 +1,16 @@
+#!/bin/sh
+# wget wrapper — translates wget args to curl for HTTPS support
+# opkg calls: wget -q [--no-check-certificate] [--timeout N] [-Y on] -O <file> <url>
+OUT="" URL="" INSECURE="" TIMEOUT=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -q) shift ;;
+        -O) OUT="$2"; shift 2 ;;
+        --no-check-certificate) INSECURE="-k"; shift ;;
+        --timeout) TIMEOUT="--max-time $2"; shift 2 ;;
+        -Y) shift 2 ;;
+        -*) shift ;;
+        *) URL="$1"; shift ;;
+    esac
+done
+exec curl -sfL $INSECURE $TIMEOUT -o "$OUT" "$URL"

@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<cfg>
+	<debug_mode>0</debug_mode>
+	<test_mode>0</test_mode>
+	<disable_charging>0</disable_charging>	
+	<rated_capacity>3600</rated_capacity>
+	<max_vbat>4200</max_vbat>
+	<max_ibat>2048</max_ibat>
+	<precharge>3000</precharge>
+	<resume_charge>4050</resume_charge>
+	<charge_done>4200</charge_done>
+	<poweron>3500</poweron>
+	<poweroff>3400</poweroff>
+	<low_voltage>3600</low_voltage>
+	<high_voltage>4450</high_voltage>
+	<poweroff_low_temp>-20</poweroff_low_temp>
+	<poweroff_high_temp>60</poweroff_high_temp>
+	<disable_charge_low_temp>0</disable_charge_low_temp>
+	<disable_charge_high_temp>55</disable_charge_high_temp>
+	<temp_changed_margin>2</temp_changed_margin>	
+	<charging_monitor_period>20000</charging_monitor_period>
+	<discharging_monitor_period>25000</discharging_monitor_period>
+	<capacity_changed_margin>2</capacity_changed_margin>
+	<standby_current>65</standby_current>
+	<active_user_current>185</active_user_current>
+	<capacity_revcharge_threshold>23</capacity_revcharge_threshold>
+	<capacity_revcharge_margin>3</capacity_revcharge_margin>
+	<capacity_table table_size="12">
+		<cap vmin="3100" vmax="3482" offset="0" hysteresis="10">0</cap>
+		<cap vmin="3483" vmax="3642" offset="0" hysteresis="10">1</cap>
+		<cap vmin="3643" vmax="3700" offset="0" hysteresis="10">10</cap>
+		<cap vmin="3701" vmax="3724" offset="0" hysteresis="10">20</cap>
+		<cap vmin="3725" vmax="3742" offset="0" hysteresis="10">30</cap>
+		<cap vmin="3743" vmax="3773" offset="0" hysteresis="10">40</cap>
+		<cap vmin="3774" vmax="3829" offset="0" hysteresis="10">50</cap>
+		<cap vmin="3830" vmax="3895" offset="0" hysteresis="10">60</cap>
+		<cap vmin="3896" vmax="3954" offset="0" hysteresis="10">70</cap>
+		<cap vmin="3955" vmax="4056" offset="0" hysteresis="10">80</cap>
+		<cap vmin="4057" vmax="4130" offset="0" hysteresis="10">90</cap>
+		<cap vmin="4131" vmax="4500" offset="0" hysteresis="10">100</cap>
+	</capacity_table>	
+	<ntc_table>
+		<vref>1800000</vref>
+		<vref_calib>1800000</vref_calib>
+		<tvm table_size="35">
+			<temp vntc="1716356">-40</temp>
+			<temp vntc="1690777">-35</temp>
+			<temp vntc="1659265">-30</temp>
+			<temp vntc="1621233">-25</temp>
+			<temp vntc="1577035">-20</temp>
+			<temp vntc="1523375">-15</temp>
+			<temp vntc="1463174">-10</temp>
+			<temp vntc="1395778">-5</temp>
+			<temp vntc="1321785">0</temp>
+			<temp vntc="1242206">5</temp>
+			<temp vntc="1158517">10</temp>
+			<temp vntc="1072433">15</temp>
+			<temp vntc="985889">20</temp>
+			<temp vntc="900000">25</temp>
+			<temp vntc="816877">30</temp>
+			<temp vntc="737489">35</temp>
+			<temp vntc="662775">40</temp>
+			<temp vntc="593242">45</temp>
+			<temp vntc="529262">50</temp>			
+			<temp vntc="470900">55</temp>
+			<temp vntc="437086">60</temp>
+			<temp vntc="370861">65</temp>
+			<temp vntc="328570">70</temp>
+			<temp vntc="291072">75</temp>
+			<temp vntc="257848">80</temp>
+			<temp vntc="228085">85</temp>
+			<temp vntc="201563">90</temp>
+			<temp vntc="177940">95</temp>
+			<temp vntc="157109">100</temp>
+			<temp vntc="138824">105</temp>
+			<temp vntc="122726">110</temp>
+			<temp vntc="108605">115</temp>
+			<temp vntc="96361">120</temp>
+			<temp vntc="85486">125</temp>
+		</tvm> 
+	</ntc_table>
+</cfg>

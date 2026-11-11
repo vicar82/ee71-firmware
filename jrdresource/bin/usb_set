@@ -1,0 +1,11 @@
+#! /bin/sh
+
+  usb_conf_path="/usb_conf/usb_config.ini"
+  if [ $1 == '0' -o $1 == '1' ]; then
+		if [ -f $usb_conf_path ]; then
+			CONTENT=$(grep 'FactoryMode' $usb_conf_path | cut -d '=' -f 2 | tr -d '\n' | tr -d '\r')
+			if [ $CONTENT != $1 ]; then
+				sed -i "s/^FactoryMode=.*/FactoryMode=$1/" $usb_conf_path
+			fi
+		fi
+	fi

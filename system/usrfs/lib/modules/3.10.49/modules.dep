@@ -1,0 +1,24 @@
+kernel/arch/arm/common/cpaccess.ko:
+kernel/arch/arm/mach-msm/dma_test.ko:
+kernel/crypto/des_generic.ko:
+kernel/crypto/authenc.ko:
+kernel/crypto/authencesn.ko:
+kernel/crypto/ansi_cprng.ko:
+kernel/block/test-iosched.ko:
+kernel/drivers/crypto/msm/qcedev.ko: kernel/drivers/crypto/msm/qce50.ko
+kernel/drivers/crypto/msm/qce50.ko:
+kernel/drivers/crypto/msm/qcrypto.ko: kernel/drivers/crypto/msm/qce50.ko kernel/crypto/des_generic.ko
+kernel/drivers/spi/spidev.ko:
+kernel/drivers/input/misc/gpio_event.ko:
+kernel/drivers/input/misc/gpio_matrix.ko:
+kernel/drivers/input/misc/gpio_input.ko:
+kernel/drivers/input/misc/gpio_output.ko:
+kernel/drivers/input/misc/gpio_axis.ko:
+kernel/drivers/mmc/card/mmc_test.ko:
+kernel/drivers/net/nf_nat_rtsp.ko: kernel/drivers/net/nf_conntrack_rtsp.ko
+kernel/drivers/net/nf_conntrack_rtsp.ko:
+extra/shortcut-fe-ipv6.ko:
+extra/shortcut-fe.ko:
+extra/alx.ko:
+extra/shortcut-fe-cm.ko: extra/shortcut-fe.ko extra/shortcut-fe-ipv6.ko
+extra/wlan.ko:

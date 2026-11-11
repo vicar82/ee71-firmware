@@ -1,0 +1,6 @@
+.DS_Store
+*.bak
+build/*.ubi
+flash/images/*.ubi
+flash/images/*.img
+release/

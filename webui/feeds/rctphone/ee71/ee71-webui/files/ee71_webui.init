@@ -1,0 +1,145 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          ee71_webui
+# Required-Start:    $remote_fs $syslog $networking
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      1
+# Short-Description: EE71 custom web UI daemons
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NAME=ee71_webui
+DESC="EE71 Web UI daemons"
+
+TRAFFIC_BIN=/usr/sbin/traffic_stats
+TRAFFIC_PID=/var/run/traffic_stats.pid
+CA_POLLER=/usr/bin/signal_ca_poller
+CA_PID=/var/run/signal_ca_poller.pid
+
+# Read a PID file, rejecting anything that is not a plain number. A
+# truncated or garbage PID file used to make `kill -0 ""` succeed-ish and
+# `kill ""` fail silently, so the daemon looked running when it was not.
+read_pid() {
+    [ -f "$1" ] || return 1
+    PID="$(cat "$1" 2>/dev/null)"
+    case "$PID" in
+        ''|*[!0-9]*)
+            rm -f "$1"
+            return 1
+            ;;
+    esac
+    return 0
+}
+
+# Stale PID files are cleaned up here, so callers can trust the answer.
+is_running() {
+    _pidfile="$1"
+    read_pid "$_pidfile" || return 1
+    if kill -0 "$PID" 2>/dev/null; then
+        return 0
+    fi
+    rm -f "$_pidfile"
+    return 1
+}
+
+start_ca_poller() {
+    if is_running "$CA_PID"; then
+        echo "$NAME: signal_ca_poller already running (pid $PID)"
+        return 0
+    fi
+    if [ ! -x "$CA_POLLER" ]; then
+        echo "$NAME: signal_ca_poller not found"
+        return 1
+    fi
+    # Демон пишет кэш /tmp/signal_ca.json раз в 5 секунд
+    start-stop-daemon -S -b -m -p "$CA_PID" -x "$CA_POLLER" -- loop
+    echo "$NAME: signal_ca_poller started"
+}
+
+stop_ca_poller() {
+    if is_running "$CA_PID"; then
+        kill "$PID" 2>/dev/null
+        rm -f "$CA_PID"
+        echo "$NAME: signal_ca_poller stopped"
+    else
+        rm -f "$CA_PID"
+    fi
+}
+
+start_traffic() {
+    if is_running "$TRAFFIC_PID"; then
+        echo "$NAME: traffic_stats already running (pid $PID)"
+        return 0
+    fi
+    if [ ! -x "$TRAFFIC_BIN" ]; then
+        echo "$NAME: traffic_stats binary not found"
+        return 1
+    fi
+    # Enable conntrack byte accounting
+    echo 1 > /proc/sys/net/netfilter/nf_conntrack_acct 2>/dev/null
+
+    # traffic_stats daemonises and writes its own PID file. Never block
+    # the boot chain waiting for it: this script runs inside the serial
+    # rc5.d sequence and anything that waits here delays every later
+    # service. Start it and move on; `status` reports the real state.
+    "$TRAFFIC_BIN"
+    if [ "$?" -eq 0 ]; then
+        echo "$NAME: traffic_stats started"
+    else
+        echo "$NAME: traffic_stats failed to start"
+        return 1
+    fi
+}
+
+stop_traffic() {
+    if is_running "$TRAFFIC_PID"; then
+        kill "$PID" 2>/dev/null
+        rm -f "$TRAFFIC_PID"
+        echo "$NAME: traffic_stats stopped"
+    else
+        # is_running already removed a stale file; this covers the rest.
+        rm -f "$TRAFFIC_PID"
+        echo "$NAME: traffic_stats not running"
+    fi
+}
+
+case "$1" in
+    start)
+        echo "Starting $DESC..."
+        start_traffic
+        start_ca_poller
+        ;;
+    stop)
+        echo "Stopping $DESC..."
+        stop_ca_poller
+        stop_traffic
+        ;;
+    restart)
+        $0 stop
+        sleep 1
+        $0 start
+        ;;
+    status)
+        _rc=0
+        if is_running "$TRAFFIC_PID"; then
+            echo "traffic_stats: running (pid $PID)"
+        else
+            echo "traffic_stats: stopped"
+            _rc=3
+        fi
+        if is_running "$CA_PID"; then
+            echo "signal_ca_poller: running (pid $PID)"
+        else
+            echo "signal_ca_poller: stopped"
+            _rc=3
+        fi
+        exit "$_rc"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+
+exit 0

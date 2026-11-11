@@ -1,0 +1,11 @@
+--- a/misc/gen-pkgconfig.in
++++ b/misc/gen-pkgconfig.in
+@@ -242,7 +242,7 @@ Description: $desc
+ Version: \${version}
+ ${USEURL}URL: https://invisible-island.net/ncurses
+ Requires.private: $reqs
+-Libs: $lib_flags $LIBS
++Libs: -L\${libdir} $LIBS
+ Libs.private: @LIBS@ $main_libs
+ Cflags: $CFLAGS
+ EOF

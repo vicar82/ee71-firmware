@@ -1,0 +1,285 @@
+#!/bin/sh
+
+#for security advices, we use Linux randomize_va_space and set 2, default is 1
+echo 2 > /proc/sys/kernel/randomize_va_space
+
+#PERF: removed drop_caches
+#echo 3 > /proc/sys/vm/drop_caches
+#PERF: removed sysrq-trigger
+#echo m > /proc/sysrq-trigger
+#PERF: removed sqlite check
+#/jrd-resource/bin/sqlite3_integrity_check.sh
+
+#watch webs apps
+touch /usr/oem/jrd_core_app_error_flag
+#start-stop-daemon -S -b -o -a /jrd-resource/bin/netlink_monitor
+if [ -f /jrd-resource/resource/jrd_popup_flag ]; then
+  rm -rf /jrd-resource/resource/jrd_popup_flag
+fi
+if [ -f /sdcard/core_app.log ]; then
+  rm -rf /sdcard/core_app.log
+fi
+if [ -f /sdcard/webs_log.log ]; then
+  rm -rf /sdcard/webs_log.log
+fi
+
+if [ -f /jrd-resource/bin/conn_temp_status ]
+then
+  rm -rf /jrd-resource/bin/conn_temp_status
+fi
+
+if [ -f /usr/oem/jrd_softdog.txt ]
+then
+  rm -rf /usr/oem/jrd_softdog.txt
+fi
+
+
+if [ -f /cache/startCatchLog_flag ];then
+  line=`cat /cache/startCatchLog_flag`
+  echo "$line"
+  main_location=`echo $line|cut -d '/' -f 2`
+  echo "$main_location"
+  #if [ -f /jrd-resource/resource/panic_dmesg ];then
+    `mv $line"kernel_log.txt" "/"$main_location"/crash_logs/"`
+    `mv $line"diag_log_qxdm.qmdl" "/"$main_location"/crash_logs/"`
+  #fi
+  start-stop-daemon -S -b -a /usr/bin/diag_klog
+  start-stop-daemon -S -b -a /usr/bin/diag_mdlog
+fi
+sleep 3
+
+##start listen socket qxdm request
+#/jrd-resource/bin/qxdm_debug_small &
+
+rm -rf /tmp/* /data/*
+sync
+
+#PERF: removed drop_caches
+#echo 3 > /proc/sys/vm/drop_caches
+#PERF: removed sysrq-trigger
+#echo m > /proc/sysrq-trigger
+
+#start-stop-daemon -S -b -a QCMAP_ConnectionManager /etc/mobileap_cfg.xml d
+#start-stop-daemon -S -b -a qti
+#rm -f /jrd-resource/bin/intend
+
+#BOOT: prepare core_app boot markers
+rm -f /core_app_thread_pid
+touch /tmp/core_app_started
+
+rm -rf /cache/core_app_log
+mkdir /cache/core_app_log
+
+core_app_index=0
+
+print_core_app_log_to_cache_flag="/jrd-resource/resource/jrdcfg/core_app_log_to_cache_flag"
+
+if [ -e /cache/backup_conf/update_flag -a -e /jrd-resource/resource/force_mode ];then
+/jrd-resource/bin/get_software_external_version.sh
+else
+/jrd-resource/bin/started_for_systemlog.sh
+fi
+
+if [ -f /cache/saved.file ]; then
+  rm -rf /cache/saved.file
+  sync
+fi
+
+#BOOT: wait for QCMAP init before first core_app start
+qcmap_ready_wait=0
+while [ "$qcmap_ready_wait" -lt 45 ]; do
+  if dmesg | grep -q "QCMAP:Init Complete"; then
+    echo "oem_watch: QCMAP ready before core_app" > /dev/kmsg
+    break
+  fi
+  sleep 1
+  qcmap_ready_wait=`expr $qcmap_ready_wait + 1`
+done
+if [ "$qcmap_ready_wait" -ge 45 ]; then
+  echo "oem_watch: QCMAP readiness timeout before core_app" > /dev/kmsg
+fi
+
+#start-stop-daemon -S -b -o -a /usr/oem/core_app
+if [ -f $print_core_app_log_to_cache_flag ]; then
+  /usr/oem/core_app 1> /cache/core_app_log/core_app_$core_app_index 2>&1 &
+else
+  start-stop-daemon -S -b -o -a /usr/oem/core_app
+fi
+while [ -f /cache/backup_conf/update_flag ]
+do
+   echo "sleep"
+   sleep 1
+done
+#BOOT: wait for QCMAP/core_app readiness before starting webs
+core_ready_wait=0
+core_ready_last_pid=""
+core_ready_stable=0
+while [ "$core_ready_wait" -lt 45 ]; do
+  core_ready_pid=`pidof core_app 2>/dev/null`
+  if [ -z "$core_ready_pid" ]; then
+    echo "oem_watch: core_app exited before webs start, restarting" > /dev/kmsg
+    core_app_index=`expr $core_app_index + 1`
+    rm -f /core_app_thread_pid
+    touch /tmp/core_app_started
+    if [ -f $print_core_app_log_to_cache_flag ]; then
+      /usr/oem/core_app 1> /cache/core_app_log/core_app_$core_app_index 2>&1 &
+    else
+      start-stop-daemon -S -b -o -a /usr/oem/core_app
+    fi
+    core_ready_last_pid=""
+    core_ready_stable=0
+  elif dmesg | grep -q "QCMAP:Init Complete" && grep -q "jrd_nw_thread" /core_app_thread_pid 2>/dev/null && grep -q "jrd_oem_connection_thread" /core_app_thread_pid 2>/dev/null; then
+    if [ "$core_ready_pid" = "$core_ready_last_pid" ]; then
+      core_ready_stable=`expr $core_ready_stable + 1`
+    else
+      core_ready_last_pid="$core_ready_pid"
+      core_ready_stable=0
+    fi
+    if [ "$core_ready_stable" -ge 3 ]; then
+      echo "oem_watch: core_app ready for webs" > /dev/kmsg
+      break
+    fi
+  else
+    core_ready_last_pid="$core_ready_pid"
+    core_ready_stable=0
+  fi
+  sleep 1
+  core_ready_wait=`expr $core_ready_wait + 1`
+done
+if [ "$core_ready_wait" -ge 45 ]; then
+  echo "oem_watch: core_app readiness timeout, starting webs" > /dev/kmsg
+fi
+sleep 1
+#rm -rf /cache/backup_conf/backup_custom
+start-stop-daemon -S -b -o -a /usr/oem/webs
+
+#PERF: removed drop_caches
+#echo 3 > /proc/sys/vm/drop_caches
+#PERF: removed sysrq-trigger
+#echo m > /proc/sysrq-trigger
+
+app_sec_bak=0
+sleep 3
+app_result=`ps -e|grep '/usr/oem/core_app'|sed -e "/grep/d"|cut -c 16-21`
+echo "$app_result"
+app_min=`echo $app_result|cut -d ':' -f 1`
+echo min$app_min
+app_sec=`echo $app_result|cut -d ':' -f 2`
+echo sec$app_sec
+app_sec=$(expr $(expr $app_min \* 60) + $(expr $app_sec))
+echo total_sec$app_sec
+app_time_cost=$(expr $app_sec \- $app_sec_bak)
+echo time_cost$app_time_cost
+if [ $app_time_cost -ge 2 ]; then
+  echo core_app_error
+#  killall -9 core_app
+  sleep 1
+# start-stop-daemon -S -b -o -a /usr/oem/core_app
+  app_sec_bak=0
+else
+  app_sec_bak=$app_sec
+fi
+  #PERF: increased from 15s to 60s (reduce CPU wakeups)
+    sleep 60
+
+#PERF: removed drop_caches
+#echo 3 > /proc/sys/vm/drop_caches
+#PERF: removed sysrq-trigger
+#echo m > /proc/sysrq-trigger
+
+sleep_count=0
+while true;
+do
+  #sleep_count=`expr $sleep_count + 1`
+  if [ $sleep_count -eq 2880 ]; then
+    sleep_count=0
+    echo 3 > /proc/sys/vm/drop_caches
+    echo m > /proc/sysrq-trigger
+    killall -9 qti
+    killall -9 QCMAP_ConnectionManager
+    killall -9 core_app
+    sleep 1
+    echo "QTI:start" > /dev/kmsg
+    start-stop-daemon -S -b --exec /usr/bin/qti
+    echo "QCMAP:start" > /dev/kmsg
+    start-stop-daemon -S -b -a QCMAP_ConnectionManager /etc/mobileap_cfg.xml d
+    start-stop-daemon -S -b -a /usr/oem/core_app
+    echo 3 > /proc/sys/vm/drop_caches
+    echo m > /proc/sysrq-trigger
+  fi
+
+  app_result=`ps -e|grep '/usr/oem/core_app'|sed -e "/grep/d"|cut -c 16-21`
+  webs_result=`ps -e|grep '/usr/oem/webs'|sed -e "/grep/d"`
+  if [ -z "$app_result" -o -z "$webs_result" ]; then
+    if [ -n "$app_result" ]; then
+       date >> /usr/oem/jrd_softdog.txt
+       echo webs_error >> /usr/oem/jrd_softdog.txt
+       if [ -f $print_core_app_log_to_cache_flag ]; then
+         date >> /cache/core_app_log/core_app_$core_app_index
+         echo webs_error >> /cache/core_app_log/core_app_$core_app_index
+       fi
+
+       #killall -9 core_app
+       start-stop-daemon -S -b -o -a /usr/oem/webs
+    fi
+    if [ -n "$webs_result" ]; then
+       date >> /usr/oem/jrd_softdog.txt
+       echo core_app_error >> /usr/oem/jrd_softdog.txt
+       if [ -f $print_core_app_log_to_cache_flag ]; then
+         date >> /cache/core_app_log/core_app_$core_app_index
+         echo core_app_error >> /cache/core_app_log/core_app_$core_app_index
+       fi
+       
+       killall -9 webs
+       sleep 1
+       sync
+       echo 3 > /proc/sys/vm/drop_caches
+       echo "restart core_app" >> /dev/kmsg
+       sleep 1
+       core_app_index=`expr $core_app_index + 1`
+       if [ -f $print_core_app_log_to_cache_flag ]; then
+         /usr/oem/core_app 1> /cache/core_app_log/core_app_$core_app_index 2>&1 &
+       else
+         start-stop-daemon -S -b -o -a /usr/oem/core_app
+       fi
+       start-stop-daemon -S -b -o -a /usr/oem/webs
+       app_sec_bak=0
+    fi
+
+    #sleep 1
+    #sync
+    #echo 3 > /proc/sys/vm/drop_caches
+    #echo m > /proc/sysrq-trigger
+    
+    #sleep 1
+    #echo "restart core_app" >> /dev/kmsg
+    #start-stop-daemon -S -b -o -a /usr/oem/core_app
+    #start-stop-daemon -S -b -o -a /usr/oem/webs
+    #app_sec_bak=0
+	
+  else
+
+    #app_min=`echo $app_result|cut -d ':' -f 1`
+    #echo min$app_min
+    #app_sec=`echo $app_result|cut -d ':' -f 2`
+    #echo sec$app_sec
+    #app_sec=$(expr $(expr $app_min \* 60) + $(expr $app_sec))
+    #echo total_sec$app_sec    
+    #app_time_cost=$(expr $app_sec \- $app_sec_bak)    
+    #echo time_cost$app_time_cost    
+    #if [ $app_time_cost -ge 10 ]; then
+    #echo core_app_error
+#      killall -9 core_app
+      #sleep 1
+#      start-stop-daemon -S -b -o -a /usr/oem/core_app
+      #app_sec_bak=0
+    #else
+      #app_sec_bak=$app_sec
+    #fi
+    
+    #PERF: increased from 15s to 60s (reduce CPU wakeups)
+    sleep 60
+  fi
+done
+echo "exit"
+exit 0

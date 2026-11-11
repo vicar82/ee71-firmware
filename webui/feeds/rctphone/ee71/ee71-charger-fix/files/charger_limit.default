@@ -1,0 +1,36 @@
+# Configuration for /etc/init.d/charger_limit
+#
+# Ceiling for the charger's input current limit, in mA. The enforced value is
+# the LOWER of this and what the USB port advertises, so raising it does not by
+# itself make the device draw more - it only stops this from holding the limit
+# down on a port that can genuinely supply more.
+#
+# 500 is the safe default: it is what a plain USB host port offers, and the
+# fault this package exists for is the stock firmware programming 1500 mA on
+# such a port regardless.
+#
+# On a real 2 A wall charger, 1500 is reasonable. Values are rounded down to
+# the chip's 100 mA steps and clamped to 100..3200.
+CHARGER_INPUT_LIMIT_MA=500
+
+# Honour a port that advertises LESS than the ceiling. Turn off only if the
+# port's advertised value is untrustworthy in your setup.
+CHARGER_FOLLOW_PORT=1
+
+# How often to re-check the register, in seconds. The stock driver reprograms
+# it on USB attach, so this only has to be fast enough to catch a replug.
+CHARGER_POLL_SECONDS=10
+
+# Undo core_app's charge inhibit when the vendor's own thresholds all say
+# charging is safe. Without this the router slowly DISCHARGES while plugged in:
+# core_app writes 1 to parameters/disable_charging, battery_core then computes a
+# charge current of zero, and the battery drifts down while the driver logs
+# "recharging!" every twenty seconds and gets nowhere. Measured: 100% to 93%
+# over twenty hours on a live device.
+#
+# The override is gated on the vendor's own limits - adapter present,
+# temperature inside temp_low/high_disable_charge, voltage below
+# recharge_voltage so a full cell is never topped up, and no charger fault. If
+# any of those is missing or unreadable it does nothing. Set to 0 to leave the
+# vendor entirely in charge.
+CHARGER_KEEP_CHARGING_ENABLED=1

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+#for qxdm debug
+
+#set -v on
+
+while [ true ]
+do 
+	CONTENT=`nc -l 192.168.225.1 -p 8888`
+	echo "$CONTENT"
+	ADDRESS=`echo "$CONTENT" | awk  '{print $2}'`
+	echo "$ADDRESS"
+	route add -net $ADDRESS netmask 255.255.255.255 gw 192.168.225.111
+	diag_socket_log $CONTENT  
+done

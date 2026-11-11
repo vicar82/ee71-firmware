@@ -1,0 +1,51 @@
+--- a/extensions/libxt_mac.c
++++ b/extensions/libxt_mac.c
+@@ -69,20 +69,36 @@ static void mac_save(const void *ip, con
+ 	print_mac(info->srcaddr);
+ }
+ 
+-static struct xtables_match mac_match = {
+-	.family		= NFPROTO_UNSPEC,
+- 	.name		= "mac",
+-	.version	= XTABLES_VERSION,
+-	.size		= XT_ALIGN(sizeof(struct xt_mac_info)),
+-	.userspacesize	= XT_ALIGN(sizeof(struct xt_mac_info)),
+-	.help		= mac_help,
+-	.x6_parse	= mac_parse,
+-	.print		= mac_print,
+-	.save		= mac_save,
+-	.x6_options	= mac_opts,
++static struct xtables_match mac_match[] = {
++	{
++		.family		= NFPROTO_UNSPEC,
++		.name		= "mac",
++		.revision	= 0,
++		.version	= XTABLES_VERSION,
++		.size		= XT_ALIGN(sizeof(struct xt_mac_info)),
++		.userspacesize	= XT_ALIGN(sizeof(struct xt_mac_info)),
++		.help		= mac_help,
++		.x6_parse	= mac_parse,
++		.print		= mac_print,
++		.save		= mac_save,
++		.x6_options	= mac_opts,
++	},
++	{
++		.family		= NFPROTO_UNSPEC,
++		.name		= "mac",
++		.revision	= 1,
++		.version	= XTABLES_VERSION,
++		.size		= XT_ALIGN(sizeof(struct xt_mac_info)),
++		.userspacesize	= XT_ALIGN(sizeof(struct xt_mac_info)),
++		.help		= mac_help,
++		.x6_parse	= mac_parse,
++		.print		= mac_print,
++		.save		= mac_save,
++		.x6_options	= mac_opts,
++	},
+ };
+ 
+ void _init(void)
+ {
+-	xtables_register_match(&mac_match);
++	xtables_register_matches(mac_match, ARRAY_SIZE(mac_match));
+ }

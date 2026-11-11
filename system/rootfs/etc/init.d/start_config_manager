@@ -1,0 +1,37 @@
+#! /bin/sh
+
+#set -e
+case "$1" in
+  start)
+
+    echo -n "Starting config_manager: "
+    if [ -f /cache/start_merge -a -f /cache/patch/system/usr/oem/config_manager ];
+    then
+    	#start-stop-daemon -S -b -o -a /cache/patch/system/usr/oem/config_manager -- -s
+    	/cache/patch/system/usr/oem/config_manager -s
+    else
+    	#start-stop-daemon -S -b -o -a /usr/oem/config_manager -- -s
+    	/usr/oem/config_manager -s
+    fi
+    echo "done"
+    ;;
+  stop)
+    echo -n "Stopping config_manager: "  
+
+    start-stop-daemon -K -n config_manager
+
+    echo "done"
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage core_app and webs { start | stop | restart }" >&2
+    exit 1
+    ;;
+esac
+echo "exit"
+
+#set +e
+exit 0

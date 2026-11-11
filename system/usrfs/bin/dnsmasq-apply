@@ -1,0 +1,38 @@
+#!/bin/sh
+# dnsmasq-apply — единственная точка сборки аргументов dnsmasq.
+# Читает /jrd-resource/dns.conf, перезапускает dnsmasq.
+# Вызывается из dns.cgi (мгновенно) и dnswatch (страховка).
+# Без конфига — поведение по умолчанию: апстрим 1.1.1.1/8.8.8.8, LAN DNS = роутер.
+
+CONF=/jrd-resource/dns.conf
+UPSTREAM="1.1.1.1 8.8.8.8"
+LAN_MODE="router"
+LAN_DNS1=""
+LAN_DNS2=""
+[ -f "$CONF" ] && . "$CONF"
+
+ARGS="-i bridge0 -I lo -z --dhcp-range=bridge0,192.168.8.100,192.168.8.200,255.255.255.0,43200 --dhcp-hostsfile=/etc/dhcp_hosts --dhcp-option-force=26,1500 --dhcp-option-force=120,abcd.com"
+
+if [ -n "$UPSTREAM" ]; then
+    ARGS="$ARGS --no-resolv"
+    for s in $UPSTREAM; do
+        ARGS="$ARGS --server=$s"
+    done
+fi
+
+if [ "$LAN_MODE" = "custom" ] && [ -n "$LAN_DNS1" ]; then
+    DNSOPT="$LAN_DNS1"
+    [ -n "$LAN_DNS2" ] && DNSOPT="$DNSOPT,$LAN_DNS2"
+    ARGS="$ARGS --dhcp-option=6,$DNSOPT"
+else
+    LAN_IP=$(ifconfig bridge0 2>/dev/null | sed -n 's/.*inet addr:\([^ ]*\).*/\1/p')
+    ARGS="$ARGS --dhcp-option-force=6,${LAN_IP:-192.168.8.1}"
+fi
+
+kill "$(cat /var/run/dnsmasq.pid 2>/dev/null)" 2>/dev/null
+sleep 1
+kill -9 "$(cat /var/run/dnsmasq.pid 2>/dev/null)" 2>/dev/null
+
+# shellcheck disable=SC2086
+dnsmasq $ARGS || { echo "dnsmasq start failed"; exit 1; }
+echo "dnsmasq applied: upstream=[${UPSTREAM:-carrier}] lan=$LAN_MODE"

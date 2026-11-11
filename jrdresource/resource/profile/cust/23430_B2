@@ -1,0 +1,5 @@
+name:BT OnePhone Internet
+apn:internet.btonephone.com
+protocol:0
+dial:*99#
+ip:3

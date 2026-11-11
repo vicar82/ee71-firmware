@@ -1,0 +1,5 @@
+name:Vodafone WAP
+apn:wap.vodafone.com.eg
+dial:*99#
+user:wap
+psw:wap

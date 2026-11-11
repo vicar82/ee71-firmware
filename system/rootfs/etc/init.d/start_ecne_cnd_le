@@ -1,0 +1,32 @@
+#! /bin/sh
+#
+#Copyright (c) 2015 Qualcomm Technologies, Inc.  All Rights Reserved.
+#Qualcomm Technologies Proprietary and Confidential.
+
+# ecne_cnd   init.d script to start the Data Software's cnd daemon
+
+set -e
+
+case "$1" in
+  start)
+        echo -n "Starting CND Daemon: "
+        echo "CND:start" > /dev/kmsg
+        start-stop-daemon -S -b -a cnd
+        echo "done"
+        ;;
+  stop)
+        echo -n "Stopping CND: "
+        start-stop-daemon -K -n cnd
+        echo "done"
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        echo "Usage CND { start | stop | restart}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

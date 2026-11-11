@@ -1,0 +1,455 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          charger_limit
+# Required-Start:
+# Default-Start:     2 3 4 5
+# Short-Description: Cap the BQ25601 input current limit to what the port offers
+### END INIT INFO
+#
+# The stock firmware programs the charger's input current limit to 1500 mA on
+# every USB attach, even when it has just recognised the port as a plain USB
+# host port. The device's own log says both things in the same breath:
+#
+#   bq25601-charger 3-006b: Warning: USB TYPE POWER_SUPPLY_TYPE_USB
+#   bq25601-charger 3-006b: set input limit to 1500mA !!!
+#
+# On a 500 mA port the inrush at the next recharge attempt trips the host's
+# over-current protection: VBUS disappears entirely (power_good 0 AND
+# vbus_stat 0, not merely sagging), USB re-enumerates, and the cycle repeats
+# every few minutes. The visible symptom is a router that looks like it is
+# rebooting, and a host that keeps asking to re-attach the device.
+#
+# This lowers that one register field to what the port actually advertises.
+# It only ever LOWERS it - see apply_limit - so the worst case is slower
+# charging, never more current than the vendor asked for.
+#
+# The charge current itself (REG02 ICHG) and the charge voltage (REG04 VREG)
+# are not touched. Nothing here can overcharge a battery.
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+NAME=charger_limit
+PIDFILE=/var/run/charger_limit.pid
+STAMPFILE=/var/run/charger_limit.stamp
+LIMIT_STATE=""
+
+# Defaults, overridable in /etc/default/charger_limit
+CHARGER_INPUT_LIMIT_MA=500
+CHARGER_POLL_SECONDS=10
+CHARGER_FOLLOW_PORT=1
+CHARGER_KEEP_CHARGING_ENABLED=1
+
+[ -r /etc/default/charger_limit ] && . /etc/default/charger_limit
+
+# BusyBox carries the i2c applets from 1.26 onward. The stock firmware's
+# BusyBox is 1.20.2, which does NOT have them, so this cannot be expressed as
+# an opkg dependency: `busybox` is registered as stock-provided. Call the
+# applets through `busybox` rather than through /usr/bin symlinks that may or
+# may not exist.
+BB=busybox
+
+i2c_get() { $BB i2cget -y -f "$1" "$2" "$3" 2>/dev/null; }
+i2c_set() { $BB i2cset -y -f "$1" "$2" "$3" "$4" 2>/dev/null; }
+
+# Locate the charger by NAME, never by a hardcoded bus/address. Writing an
+# arbitrary register to whatever happens to sit at 3-006b on some other build
+# is not a risk worth taking for a convenience feature.
+find_charger() {
+	CHG_BUS=""
+	CHG_ADDR=""
+	for d in /sys/bus/i2c/devices/*/; do
+		[ -r "${d}name" ] || continue
+		[ "$(cat "${d}name" 2>/dev/null)" = "bq25601-charger" ] || continue
+		b=$(basename "$d")            # e.g. 3-006b
+		CHG_BUS="${b%%-*}"
+		CHG_ADDR="0x${b#*-}"
+		# 3-006b -> 0x006b; i2cget wants 0x6b
+		CHG_ADDR="0x$(printf '%x' $((CHG_ADDR)))"
+		return 0
+	done
+	return 1
+}
+
+precheck() {
+	# `busybox --list`, not `busybox i2cget --help`. BusyBox answers an unknown
+	# applet with "<name>: applet not found" - which CONTAINS the string i2c
+	# when the name is i2cget, so the old grep passed on precisely the BusyBox
+	# that lacks the applet. Verified: `busybox i2cNOPE --help` prints
+	# "i2cNOPE: applet not found". The check that was meant to produce a
+	# helpful message produced none, and the user got "could not program REG00"
+	# pointing at the chip instead of at the missing tool.
+	if ! $BB --list 2>/dev/null | grep -qx i2cget; then
+		echo "[ERR] this BusyBox has no i2c applets" >&2
+		echo "      the stock 1.20.2 predates them - install ours (1.36.1)" >&2
+		return 1
+	fi
+	if ! find_charger; then
+		echo "[ERR] no i2c device named bq25601-charger found" >&2
+		echo "      refusing to write registers to an unidentified chip" >&2
+		return 1
+	fi
+	if [ ! -c "/dev/i2c-${CHG_BUS}" ]; then
+		echo "[ERR] /dev/i2c-${CHG_BUS} missing (CONFIG_I2C_CHARDEV)" >&2
+		return 1
+	fi
+	return 0
+}
+
+# mA -> REG00 IINLIM code. Base 100 mA, 100 mA per step, field is 5 bits.
+ma_to_code() {
+	c=$(( ($1 - 100) / 100 ))
+	[ "$c" -lt 0 ] && c=0
+	[ "$c" -gt 31 ] && c=31
+	echo "$c"
+}
+code_to_ma() { echo $(( $1 * 100 + 100 )); }
+
+# What the port says it can supply, in mA. Absent or nonsense -> empty.
+port_limit_ma() {
+	v=$(cat /sys/class/power_supply/usb/current_max 2>/dev/null)
+	case "$v" in ''|*[!0-9]*) return 1 ;; esac
+	[ "$v" -gt 0 ] || return 1
+	echo $(( v / 1000 ))
+}
+
+# CHARGER_INPUT_LIMIT_MA is a CEILING, not a target. The enforced value is the
+# lower of it and what the port advertises:
+#
+#   port says 500, ceiling 500  -> 500
+#   port says 500, ceiling 1500 -> 500   (honour the weaker port)
+#   port says 2040, ceiling 500 -> 500   (do NOT trust a port that claims to be
+#                                         a 2 A charger; this device has been
+#                                         seen classifying a laptop port as
+#                                         USB_DCP with current_max 2040000,
+#                                         which is how the fault presents)
+#   port unreadable, ceiling 500 -> 500
+#
+# On a genuine 2 A wall charger, raise the ceiling in /etc/default/charger_limit
+# rather than teaching this to trust the port's own claim.
+target_ma() {
+	t="$CHARGER_INPUT_LIMIT_MA"
+	if [ "$CHARGER_FOLLOW_PORT" = "1" ]; then
+		p=$(port_limit_ma) && [ "$p" -lt "$t" ] && t="$p"
+	fi
+	echo "$t"
+}
+
+BATT=/sys/class/power_supply/battery
+BATTP=$BATT/parameters
+
+# Read a positive integer from a file, or fail. Everything below feeds
+# arithmetic, and `[ "$x" -lt N ]` on a non-number exits 2, which an `if` reads
+# as false - the trap that has bitten this project three times.
+read_int() {
+	_v=$(cat "$1" 2>/dev/null)
+	case "$_v" in ''|*[!0-9-]*) return 1 ;; esac
+	echo "$_v"
+}
+
+# Undo the vendor's charge inhibit - but only when the vendor's OWN thresholds
+# all say charging is safe.
+#
+# core_app writes 1 to parameters/disable_charging (the string
+# "echo %d > /sys/class/power_supply/battery/parameters/disable_charging" is in
+# its binary), and battery_core then computes a charge current of zero:
+#
+#     if (bat->disable_chg != 0) mA=0; else mA=bat->current_max/1000;
+#
+# from battery_core_external_power_changed(), readable in the published vendor
+# source at forth32/kernel-Y900. The result on this device was a router that
+# slowly DISCHARGED while plugged in - 100% to 93% over twenty hours - while
+# the driver logged "recharging!" every twenty seconds and got nowhere.
+#
+# Overriding a vendor's battery management is not something to do casually, so
+# this refuses unless every gate the vendor itself defines is satisfied:
+# adapter present, temperature inside temp_low_disable_charge ..
+# temp_high_disable_charge, voltage below recharge_voltage (so a full battery is
+# never topped up - that is the vendor's own hysteresis, and it is good for the
+# cell), and the charger reporting no fault. If any gate is missing or
+# unreadable, we do nothing at all.
+allow_charging() {
+	[ "$CHARGER_KEEP_CHARGING_ENABLED" = "1" ] || return 0
+	[ -w "$BATTP/disable_charging" ] || return 0
+	_dis=$(read_int "$BATTP/disable_charging") || return 0
+	[ "$_dis" = "1" ] || return 0
+
+	[ "$(cat /sys/class/power_supply/usb/online 2>/dev/null)" = "1" ] || return 0
+
+	_t=$(read_int "$BATT/temp")                       || return 0
+	_lo=$(read_int "$BATTP/temp_low_disable_charge")  || return 0
+	_hi=$(read_int "$BATTP/temp_high_disable_charge") || return 0
+	[ "$_t" -gt "$_lo" ] && [ "$_t" -lt "$_hi" ]      || return 0
+
+	_uv=$(read_int "$BATT/voltage_now")               || return 0
+	_mv=$(( _uv / 1000 ))
+	_rv=$(read_int "$BATTP/recharge_voltage")         || return 0
+	[ "$_mv" -lt "$_rv" ]                             || return 0
+
+	_f=$(i2c_get "$CHG_BUS" "$CHG_ADDR" 0x09)
+	[ "$_f" = "0x00" ]                                || return 0
+
+	echo 0 > "$BATTP/disable_charging" 2>/dev/null || return 0
+	logger -t "$NAME" "cleared disable_charging (${_mv}mV < ${_rv}mV recharge, ${_t}C in ${_lo}..${_hi}, no faults)" 2>/dev/null || true
+	return 0
+}
+
+# Silence the DPM interrupts our own cap provokes.
+#
+# Lowering IINLIM to what the port offers has a cost nobody would guess: the
+# charge current (480 mA) plus the system draw sits right ON the 500 mA input
+# limit, so the chip oscillates in and out of input-current regulation and
+# raises an interrupt on every transition. Measured on the device, 10-second
+# samples:
+#
+#     REG00=0x64 (our 500 mA)     charger 104/s   i2c 192/s   pinctrl 104/s
+#     REG00=0x6e (stock 1500 mA)  charger  22/s   i2c  53/s   pinctrl  22/s
+#
+# The charger's IRQ line is a GPIO, so each one is counted twice - at the
+# charger and at pinctrl - and each drives a pair of i2c transactions. That is
+# roughly 370 extra interrupts per second, about half of all interrupt activity
+# on the device, and it shows up as kernel-worker CPU and as heat. Our fix
+# caused it.
+#
+# REG0A bits 1 and 0 are VINDPM_INT_MASK and IINDPM_INT_MASK, which exist for
+# exactly this. Setting them took all three counters to 0/s with REG08 and
+# REG01 unchanged and the battery still Full: the regulation still happens, the
+# chip just stops announcing every transition. Bits are only ever SET here,
+# never cleared, and no other bit in REG0A is touched.
+mask_dpm_interrupts() {
+	cur=$(i2c_get "$CHG_BUS" "$CHG_ADDR" 0x0a)
+	case "$cur" in 0x*) ;; *) return 1 ;; esac
+	[ $(( cur & 0x03 )) -eq 3 ] && return 0
+	new=$(printf '0x%02x' $(( cur | 0x03 )))
+	i2c_set "$CHG_BUS" "$CHG_ADDR" 0x0a "$new" || return 1
+	logger -t "$NAME" "masked VINDPM/IINDPM interrupts (REG0A $cur -> $new)" 2>/dev/null || true
+	return 0
+}
+
+# REG00 is EN_HIZ[7] | STAT_CTRL[6:5] | IINLIM[4:0], and we are not its only
+# writer: the vendor's bq25601-charger driver owns this chip, and i2c_get /
+# i2c_set use -f to reach past that claim. So this is a read-modify-write race
+# against a live kernel driver, and it is handled rather than hoped about.
+#
+# EN_HIZ is the dangerous bit. Set, it suspends input current entirely and the
+# device runs off the battery. A naive read-modify-write can RE-SET it: read a
+# value while the driver has it set, the driver clears it, we write our copy
+# back with the stale bit. Worse, it could not self-correct - the next pass
+# would find IINLIM already at the cap and return early, leaving EN_HIZ set
+# until the battery went flat. Which looks exactly like the fault this package
+# exists to fix.
+#
+# So: never write while EN_HIZ is set (say so instead - it is the driver's
+# decision, possibly thermal, and not ours to clear), and re-read immediately
+# before writing, skipping the pass if anything moved. A skipped pass costs ten
+# seconds.
+apply_limit() {
+	cur=$(i2c_get "$CHG_BUS" "$CHG_ADDR" 0x00)
+	case "$cur" in
+		0x*) ;;
+		*) LIMIT_STATE="cannot read REG00 from ${CHG_ADDR:-?} on i2c-${CHG_BUS:-?}"
+		   return 1 ;;
+	esac
+
+	if [ $(( (cur & 0x80) >> 7 )) -eq 1 ]; then
+		LIMIT_STATE="EN_HIZ set (REG00 $cur) - input suspended by the driver, not touching it"
+		return 0
+	fi
+
+	cur_code=$(( cur & 0x1F ))
+	want_code=$(ma_to_code "$(target_ma)")
+
+	# Only ever lower. If the vendor driver has already programmed something
+	# at or below the cap, leave it alone - it may know something we do not.
+	if [ "$cur_code" -le "$want_code" ]; then
+		# Already capped - but the mask can have been cleared by the vendor
+		# driver reprogramming the chip, so keep it applied.
+		mask_dpm_interrupts
+		LIMIT_STATE="holding at $(code_to_ma $cur_code)mA"
+		return 0
+	fi
+
+	# Compare and swap: if the register moved between the read above and here,
+	# our idea of bits 7:5 is stale. Drop this pass rather than write it.
+	recheck=$(i2c_get "$CHG_BUS" "$CHG_ADDR" 0x00)
+	if [ "$recheck" != "$cur" ]; then
+		LIMIT_STATE="REG00 moved under us ($cur -> $recheck), skipping this pass"
+		return 0
+	fi
+
+	new=$(printf '0x%02x' $(( (cur & 0x60) | want_code )))
+	if ! i2c_set "$CHG_BUS" "$CHG_ADDR" 0x00 "$new"; then
+		LIMIT_STATE="write to REG00 failed"
+		return 1
+	fi
+	LIMIT_STATE="input limit $(code_to_ma $cur_code)mA -> $(code_to_ma $want_code)mA (REG00 $cur -> $new)"
+	logger -t "$NAME" "$LIMIT_STATE" 2>/dev/null || true
+	# Do this AFTER the cap, not before: it is the cap that creates the
+	# oscillation these masks suppress.
+	mask_dpm_interrupts
+	return 0
+}
+
+# The vendor driver reprograms REG00 on USB ATTACH, not on every recharge -
+# measured: a recharge event fired with our value in place and did not disturb
+# it. So a one-shot write survives until the cable is replugged, and a slow
+# poll is enough to cover that. Ten seconds of one i2c byte read is not
+# something this device will notice.
+# Logs only on a CHANGE of outcome, and stamps a heartbeat.
+#
+# Two reasons. syslogd here runs with a 64 KB ring (-C64), so a line every ten
+# seconds during a sustained EN_HIZ - a thermal throttle, a weak port - would
+# wipe the entire log in about an hour, destroying exactly the charger history
+# anyone would want. And the previous loop swallowed its own failures: it could
+# fail every pass forever while saying nothing at all, which is how a watcher
+# that did nothing went unnoticed.
+watch_loop() {
+	_last=""
+	while :; do
+		apply_limit
+		allow_charging
+		_now="$LIMIT_STATE"
+		if [ "$_now" != "$_last" ]; then
+			logger -t "$NAME" "$_now" 2>/dev/null || true
+			_last="$_now"
+		fi
+		# Heartbeat: proof the loop is running AND reaching the chip, which is
+		# what `status` reports. A live pid is not the same as a working
+		# watcher.
+		date +%s > "$STAMPFILE" 2>/dev/null || true
+		sleep "$CHARGER_POLL_SECONDS"
+	done
+}
+
+case "$1" in
+	# Internal: the body start-stop-daemon re-execs. Not in the usage line
+	# because it is not something to run by hand.
+	__watch)
+		# precheck FIRST. start-stop-daemon -b execs, so this process does not
+		# inherit CHG_BUS/CHG_ADDR from the shell that ran `start` - the old
+		# `watch_loop &` was a fork and did. Without this the loop called
+		# i2cget with empty arguments every ten seconds forever, logged
+		# nothing because i2c_get swallows stderr, and `status` still reported
+		# "watcher: running". The cap survived only because the one-shot
+		# apply_limit in `start` runs before the exec; the next USB replug
+		# would have put 1500 mA back with nothing to undo it.
+		precheck || exit 1
+		watch_loop
+		;;
+	start)
+		precheck || exit 1
+		apply_limit || { echo "[ERR] could not program REG00" >&2; exit 1; }
+		allow_charging
+		# Stamp here, from the synchronous pass `start` has just done, not only
+		# from inside the loop. Otherwise there is a window of up to
+		# CHARGER_POLL_SECONDS after every start - including the restart that an
+		# `opkg install` performs - in which `status` finds no stamp and reports
+		# "alive but has NEVER completed a pass ... it is not reaching the chip".
+		# That is an alarming diagnosis for a watcher that is two seconds old,
+		# and it was printed on this device immediately after an upgrade.
+		date +%s > "$STAMPFILE" 2>/dev/null || true
+		if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
+			echo "$NAME already watching"
+			exit 0
+		fi
+		# start-stop-daemon -b, not `watch_loop &`.
+		#
+		# The plain background job made `opkg install ee71-charger-fix` hang
+		# forever: the postinst starts us, and the watcher held opkg's pipe
+		# open, so anything reading opkg's output never saw EOF. An install sat
+		# wedged on the device for over an hour before that was noticed.
+		#
+		# Redirecting 0/1/2 to /dev/null was not enough, and the device said so
+		# - the watcher's /proc/<pid>/fd still listed pipe entries on fds 11
+		# and 12. A background job is a FORK of this shell that never execs, so
+		# it keeps every descriptor the shell had open, including the ones ash
+		# uses for its own bookkeeping. Only an exec clears those.
+		#
+		# start-stop-daemon -b re-execs, so nothing is inherited, and -m writes
+		# the pidfile for the real process rather than for a shell that is
+		# about to disappear.
+		start-stop-daemon -S -b -m -p "$PIDFILE" -x /bin/sh -- "$0" __watch
+		echo "$NAME: capped at $(target_ma)mA, watching every ${CHARGER_POLL_SECONDS}s"
+		;;
+	stop)
+		if [ -f "$PIDFILE" ]; then
+			start-stop-daemon -K -p "$PIDFILE" 2>/dev/null || \
+				kill "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null
+			rm -f "$PIDFILE"
+		fi
+		# Clear the heartbeat too, so a stopped watcher cannot leave a fresh
+		# timestamp behind for status to read as healthy.
+		rm -f "$STAMPFILE"
+		# The register is deliberately left as it is. Restoring 1500 mA would
+		# re-create the fault, and the vendor driver reprograms it on the next
+		# USB attach anyway.
+		echo "$NAME stopped (register left as-is)"
+		;;
+	status)
+		if ! precheck; then exit 1; fi
+		cur=$(i2c_get "$CHG_BUS" "$CHG_ADDR" 0x00)
+		echo "charger:    bq25601 on i2c-${CHG_BUS} at ${CHG_ADDR}"
+		echo "REG00:      $cur  -> input limit $(code_to_ma $(( cur & 0x1F )))mA"
+		echo "port says:  $(port_limit_ma 2>/dev/null || echo '?')mA"
+		echo "cap:        $(target_ma)mA"
+		_r0a=$(i2c_get "$CHG_BUS" "$CHG_ADDR" 0x0a)
+		if [ $(( _r0a & 0x03 )) -eq 3 ] 2>/dev/null; then
+			echo "DPM ints:   masked (REG0A $_r0a) - without this the cap"
+			echo "            provokes ~370 extra interrupts/s"
+		else
+			echo "DPM ints:   NOT masked (REG0A $_r0a)"
+		fi
+		# A live pid is not a working watcher. This reported "running" for a
+		# loop that had been calling i2cget with empty arguments since boot and
+		# had never once reached the chip, so it now reports the heartbeat the
+		# loop writes after each pass.
+		if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
+			_st=$(cat "$STAMPFILE" 2>/dev/null)
+			case "$_st" in
+				''|*[!0-9]*)
+					echo "watcher:    pid $(cat "$PIDFILE") is alive but has NEVER completed a pass"
+					echo "            (it is not reaching the chip - check 'logread | grep $NAME')" ;;
+				*)
+					_age=$(( $(date +%s) - _st ))
+					if [ "$_age" -gt $(( CHARGER_POLL_SECONDS * 3 )) ]; then
+						echo "watcher:    pid $(cat "$PIDFILE") alive but last pass ${_age}s ago - STALLED"
+					else
+						echo "watcher:    running (pid $(cat "$PIDFILE"), last pass ${_age}s ago)"
+					fi ;;
+			esac
+		else
+			echo "watcher:    not running"
+		fi
+		# dmesg is a fixed ring buffer, so "since boot" is a lie the moment it
+		# wraps - and it does: at uptime 9443 s on this device NOT ONE charger
+		# line survived, so the count read 0 whether the fix was working or the
+		# evidence had simply scrolled away. Report whether the evidence is
+		# still there before reporting the number.
+		# Outside the dmesg branch below: this is the charging state, and it
+		# is worth seeing whether or not the kernel ring has wrapped. The
+		# first version of these two lines was indented into the `if` and so
+		# only ever printed when the ring HAD wrapped - which is the one case
+		# where the rest of the block says it knows nothing.
+		_dc=$(cat "$BATTP/disable_charging" 2>/dev/null)
+		_mv=$(read_int "$BATT/voltage_now") && _mv=$(( _mv / 1000 )) || _mv="?"
+		echo "charging:   $(cat $BATT/status 2>/dev/null), $(cat $BATT/capacity 2>/dev/null)%, ${_mv}mV"
+		echo "            vendor disable_charging=${_dc:-?}, recharge below $(cat $BATTP/recharge_voltage 2>/dev/null)mV"
+
+		_pg=$(dmesg | grep -c 'power_good is 0')
+		_any=$(dmesg | grep -ci bq25601)
+		if [ "$_any" -eq 0 ]; then
+			echo "VBUS drops: unknown - no charger lines left in the dmesg ring"
+			echo "            (it has wrapped; 'logread | grep charger_limit'"
+			echo "             shows what this watcher itself has done)"
+		else
+			echo "VBUS drops: $_pg in what dmesg still holds"
+		fi
+		;;
+	restart)
+		"$0" stop
+		"$0" start
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|status}" >&2
+		exit 1
+		;;
+esac
+exit 0

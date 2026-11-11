@@ -1,0 +1,5 @@
+name:Batelco
+apn:internet.batelco.com
+dial:*99#
+user:WAP
+psw:WAP

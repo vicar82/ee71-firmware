@@ -1,0 +1,1 @@
+../init.d/find_recovery_partitions.sh

@@ -1,0 +1,20 @@
+#! /bin/sh
+
+set -e
+
+case "$1" in
+  start)
+    echo "Starting Recovery "
+    start-stop-daemon --start --background --exec /usr/bin/recovery_leds
+    /usr/bin/recovery
+    echo "done"
+    ;;
+  stop)
+    echo "No need to stop recovery "
+    ;;
+
+*)
+    exit 1
+;;
+esac
+exit 0

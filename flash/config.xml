@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<CONTENT date="2014-09-27" version="5.0">
+	  <!-- 0: auto generate config.xml, 1: manual generate config.xml -->
+	  <Generate_Type>0</Generate_Type>
+	  <Base_Info>
+	  	<Project_Code>EE71</Project_Code>
+	  	<Project_Name>EE71</Project_Name>
+	  	<Customer_Code>E1</Customer_Code>
+	  	<Customer_Name>ee</Customer_Name>
+	  	<Major_Version>02</Major_Version>
+	  	<Minor_Version>00</Minor_Version>
+	  	<Release_Index>36</Release_Index>
+	  </Base_Info>
+    <Variant_Code>V</Variant_Code>
+    <CURef>EE71V-2XE1000</CURef>
+    <Hardware>
+ 		   <PCB_Ver>V3.0</PCB_Ver>
+ 		   <RF_Device_Code>00</RF_Device_Code>
+ 		   <!-- RAM type 1: 0 - SDRAM, 1 DDR; RAM size 2-3: 0 32Mb 1 64Mb ...;  -->
+ 		   <RAM_Code>000</RAM_Code>
+ 		   <!-- Flash type 1: 0 - NOR, 1 NAND, 2 One-NAND, 3 eMMC_NAND; Vendor Code 2-3: 00 Tishiba, 01 Samsung, 02 Micron, 03 Hynix, 04 Nomonyx; Flash Size 4-5: 00 16Mb, 01 32Mb ...; Page Size 6-7: 00 512B, 01 1K ...-->
+ 		   <Flash_Code>1020803</Flash_Code>
+    </Hardware>
+    <Software>
+    	  <External_Ver>EE71_E1_02.00_36</External_Ver>
+          <INNER_Ver>EE71_E1_02.00_36</INNER_Ver>
+        <Baseline_Dependency>
+          <SBL>EE71_SBL_E1_02.00_20</SBL>
+          <TZ>EE71_TZ_E1_02.00_07</TZ>
+          <RPM>EE71_RPM_E1_02.00_08</RPM>
+          <EFS2>EE71_EFS2_E1_02.00_64</EFS2>
+          <QDSP>EE71_QDSP_E1_02.00_95</QDSP>
+          <APPSBL>EE71_APPSBL_E1_02.00_11</APPSBL>
+          <APPS>EE71_APPS_E1_02.00_94</APPS>
+          <SYSTEM>EE71_SYSTEM_E1_02.00_591</SYSTEM>
+          <JRDRESOURCE>EE71_JRDRESOURCE_E1_02.00_99</JRDRESOURCE>
+          <PARTT>EE71_PARTT_E1_02.00_03</PARTT>
+        </Baseline_Dependency>    
+    </Software>
+	<Git_Commit_Hashid>4e64cc7311d46ba9b7a7209e4ceb5ae9c7cd8b75</Git_Commit_Hashid>
+</CONTENT>

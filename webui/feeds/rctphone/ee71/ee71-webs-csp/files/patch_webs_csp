@@ -1,0 +1,74 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          patch_webs_csp
+# Required-Start:    $remote_fs
+# Default-Start:     2 3 4 5
+# Short-Description: Patch stock webs binary for webui compatibility
+### END INIT INFO
+
+# Patches the GoAhead webs binary strings in-place.
+# Original restrictive CSP prevents iframe embedding and inline scripts.
+# Stock TestRequest watchdog JSON can be delivered to core_app without its
+# final byte; keep the replacement valid with and without the trailing space.
+# Replacement strings MUST be the same length (sed replaces in binary).
+#
+# Old: default-src 'self';frame-src https:;style-src 'self' data:;img-src 'self' data:
+# New: default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;frame-src *;img-src *
+
+WEBS_BIN="/usr/oem/webs"
+CSP_OLD="default-src 'self';frame-src https:;style-src 'self' data:;img-src 'self' data:"
+CSP_NEW="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;frame-src *;img-src *  "
+TESTREQ_OLD='{"jsonrpc":"2.0","method":"TestRequest","params":null,"id":"99.99"}'
+TESTREQ_NEW='{"jsonrpc":"2.0","method":"TestRequest","params":null,"id":"99.9"} '
+
+backup_webs() {
+    if [ ! -f "${WEBS_BIN}.csp_bak" ]; then
+        cp "$WEBS_BIN" "${WEBS_BIN}.csp_bak"
+        echo "webs_csp: backed up original to ${WEBS_BIN}.csp_bak"
+    fi
+}
+
+has_string() {
+    grep -q "$1" "$WEBS_BIN" 2>/dev/null
+}
+
+case "$1" in
+  start)
+    if [ ! -f "$WEBS_BIN" ]; then
+        echo "[ERR] webs binary not found: $WEBS_BIN"
+        exit 1
+    fi
+
+    if has_string "$CSP_OLD"; then
+        backup_webs
+        sed -i "s|$CSP_OLD|$CSP_NEW|g" "$WEBS_BIN"
+        echo "webs_csp: CSP patched for iframe/inline support"
+    else
+        if has_string "unsafe-inline"; then
+            echo "webs_csp: already patched"
+        else
+            echo "webs_csp: CSP string not found (different firmware version?)"
+        fi
+    fi
+
+    if has_string "$TESTREQ_OLD"; then
+        backup_webs
+        sed -i "s|$TESTREQ_OLD|$TESTREQ_NEW|g" "$WEBS_BIN"
+        echo "webs_csp: TestRequest watchdog JSON patched"
+    else
+        if has_string "$TESTREQ_NEW"; then
+            echo "webs_csp: TestRequest watchdog JSON already patched"
+        else
+            echo "webs_csp: TestRequest JSON string not found (different firmware version?)"
+        fi
+    fi
+    ;;
+  stop)
+    echo "webs_csp: no stop action (patch is persistent)"
+    ;;
+  *)
+    echo "Usage: $0 {start|stop}" >&2
+    exit 1
+    ;;
+esac
+exit 0

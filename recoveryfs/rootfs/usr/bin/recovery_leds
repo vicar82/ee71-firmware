@@ -1,0 +1,21 @@
+#! /bin/sh
+
+LEDS_PATH="/sys/class/leds/"
+ALL_LEDS=`ls $LEDS_PATH`
+WATER_LEDS="signal-blue wlan sms battery-blue"
+
+for led in $ALL_LEDS
+do
+  echo 0 > $LEDS_PATH/$led/brightness
+  echo none > $LEDS_PATH/$led/trigger
+done
+
+while :
+do
+  for led in $WATER_LEDS
+  do
+    echo 255 > $LEDS_PATH/$led/brightness
+    sleep 0.5
+    echo 0 > $LEDS_PATH/$led/brightness
+  done
+done

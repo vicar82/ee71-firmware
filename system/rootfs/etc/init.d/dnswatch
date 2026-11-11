@@ -1,0 +1,21 @@
+#!/bin/sh
+# dnswatch v2 — страховочная сеть для dnsmasq.
+# QCMAP перезапускает «свой» dnsmasq при reattach мобильной сети;
+# этот цикл поднимает нашу конфигурацию обратно, если dnsmasq пропал.
+# Конфигурация — только через /usr/bin/dnsmasq-apply (+ dns.conf).
+PIDFILE=/var/run/dnswatch.pid
+if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    exit 0
+fi
+
+(
+  while :; do
+    if ! pidof dnsmasq >/dev/null 2>&1; then
+      /usr/bin/dnsmasq-apply >/dev/null 2>&1
+      logger -t dnswatch "dnsmasq restored"
+    fi
+    sleep 15
+  done
+) &
+
+echo $! > "$PIDFILE"

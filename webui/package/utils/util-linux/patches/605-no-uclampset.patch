@@ -1,0 +1,39 @@
+# XXX syscall `sched_attr` since Linux 3.14
+
+--- a/meson.build
++++ b/meson.build
+@@ -3391,14 +3391,14 @@ exe3 = executable(
+   install : opt,
+   build_by_default : opt)
+ 
+-exe4 = executable(
+-  'uclampset',
+-  'schedutils/uclampset.c',
+-  include_directories : includes,
+-  link_with : lib_common,
+-  install_dir : usrbin_exec_dir,
+-  install : opt,
+-  build_by_default : opt)
++#exe4 = executable(
++#  'uclampset',
++#  'schedutils/uclampset.c',
++#  include_directories : includes,
++#  link_with : lib_common,
++#  install_dir : usrbin_exec_dir,
++#  install : opt,
++#  build_by_default : opt)
+ 
+ exe5 = executable(
+   'coresched',
+@@ -3410,9 +3410,9 @@ exe5 = executable(
+   build_by_default : opt)
+ 
+ if opt and not is_disabler(exe)
+-  exes += [exe, exe2, exe3, exe4, exe5]
++  exes += [exe, exe2, exe3, exe5]
+   manadocs += schedutils_manadocs
+-  bashcompletions += ['chrt', 'ionice', 'taskset', 'uclampset', 'coresched']
++  bashcompletions += ['chrt', 'ionice', 'taskset', 'coresched']
+ endif
+ 
+ ############################################################

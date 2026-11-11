@@ -1,0 +1,224 @@
+#!/bin/sh
+# signal_ca_poller — фоновый опрос агрегации несущих (CA) с кэшем.
+#
+# Режимы:
+#   signal_ca_poller once   — один опрос, записать /tmp/signal_ca.json
+#   signal_ca_poller loop   — демон: опрос каждые $INTERVAL секунд
+#
+# Почему не прямой запрос из signal.cgi каждый раз: AT-опрос держит
+# диагностический канал модема ~2-4 секунды, и пока он идёт,
+# однопоточный webs не отдаёт остальные запросы — дашборд «фризит».
+# Кэш отдаётся мгновенно; поллер обновляет его в фоне.
+#
+# Источники данных (по порядку, результаты объединяются):
+#   AT$QCRSRP?   — RSRP обслуживающих и соседних ячеек (PCI,EARFCN,RSRP)*
+#   AT$QCCAINFO? — состав CA (некоторые билды отдают только PCC в $QCRSRP)
+# * на EE71 $QCRSRP иногда отдаёт лишь PCC — $QCCAINFO закрывает SCC.
+set -u
+
+CACHE="/tmp/signal_ca.json"
+TMP="${CACHE}.$$"
+AT_DEV="/dev/smd7"
+[ ! -c "$AT_DEV" ] && AT_DEV="/dev/smd11"
+AT_READ_TIMEOUT=4
+INTERVAL=8
+LOCK="/tmp/signal_ca.lock"
+
+log() { echo "signal_ca_poller: $*" >&2; }
+
+# run_timeout <сек> <команда...> — граница по времени для общения с модемом
+# (аналог cgi-common.sh; поллер не sourcing-ует CGI-библиотеку).
+run_timeout() {
+    _secs="$1"; shift
+    ( "$@" ) & _pid=$!
+    ( sleep "$_secs"; kill "$_pid" 2>/dev/null ) & _killer=$!
+    wait "$_pid" 2>/dev/null
+    kill "$_killer" 2>/dev/null
+    return 0
+}
+
+# at_query <команда> — отправить AT через microcom. Сырой open()+write()
+# на /dev/smd7 на этом устройстве не работает — порт открывает microcom
+# (ставит termios/скорость), и убирает stale-лок /var/lock/LCK..smd7.
+# Окна generous (-t3000/-d4000): после ребута модем отвечает медленнее,
+# короткое окно обрезает ответ до мусора.
+at_query() {
+    rm -f /var/lock/LCK..smd7
+    echo -e "$1\r" | microcom -d4000 -t3000 "$AT_DEV" 2>/dev/null
+}
+
+# Общая таблица EARFCN→band (36.101), формат как у QCRSRP ($-стиль не нужен,
+# awk-функция используется обоими парсерами)
+awk_table='
+    function earfcn_to_band(e) {
+        e = e + 0
+        if (e >= 0 && e <= 599) return 1
+        if (e >= 600 && e <= 1199) return 2
+        if (e >= 1200 && e <= 1949) return 3
+        if (e >= 1950 && e <= 2399) return 4
+        if (e >= 2400 && e <= 2649) return 5
+        if (e >= 2650 && e <= 2749) return 6
+        if (e >= 2750 && e <= 3449) return 7
+        if (e >= 3450 && e <= 3799) return 8
+        if (e >= 3800 && e <= 4149) return 9
+        if (e >= 4150 && e <= 4749) return 10
+        if (e >= 4750 && e <= 4949) return 11
+        if (e >= 5010 && e <= 5179) return 12
+        if (e >= 5180 && e <= 5279) return 13
+        if (e >= 5280 && e <= 5379) return 14
+        if (e >= 5730 && e <= 5849) return 17
+        if (e >= 5850 && e <= 5999) return 18
+        if (e >= 6000 && e <= 6149) return 19
+        if (e >= 6150 && e <= 6449) return 20
+        if (e >= 6450 && e <= 6599) return 21
+        if (e >= 7500 && e <= 7699) return 25
+        if (e >= 7700 && e <= 8039) return 26
+        if (e >= 8040 && e <= 8689) return 28
+        if (e >= 9040 && e <= 9209) return 31
+        if (e >= 9210 && e <= 9659) return 32
+        if (e >= 36000 && e <= 36199) return 33
+        if (e >= 36200 && e <= 36349) return 34
+        if (e >= 36350 && e <= 36949) return 35
+        if (e >= 36950 && e <= 37549) return 36
+        if (e >= 37550 && e <= 37749) return 37
+        if (e >= 37750 && e <= 38249) return 38
+        if (e >= 38250 && e <= 38649) return 39
+        if (e >= 38650 && e <= 39649) return 40
+        if (e >= 39650 && e <= 41589) return 41
+        if (e >= 41590 && e <= 43589) return 42
+        if (e >= 43590 && e <= 45589) return 43
+        return 0
+    }'
+
+# qcrsrp_parse — PCI,EARFCN,"RSRP" → TSV: type earfcn band rsrp pci
+# Фильтруем мусор: PCI=000 / RSRP>=0 (в ответе всегда есть заполнитель
+# "000,525,000.00" — без него выходит фантомная лишняя ячейка).
+qcrsrp_parse() {
+    awk "$awk_table"'
+    /\$QCRSRP:/ {
+        sub(/.*\$QCRSRP: */, "")
+        gsub(/"/, "")
+        n = split($0, f, ",")
+        for (i = 1; i + 2 <= n; i += 3) {
+            pci = f[i]; earfcn = f[i+1]; rsrp = f[i+2]
+            if (earfcn == "" || rsrp == "") continue
+            if (pci+0 == 0 || rsrp+0 >= 0) continue
+            if (!(earfcn in best) || rsrp+0 > best[earfcn]+0) {
+                best[earfcn] = rsrp
+                pcis[earfcn] = pci
+            }
+        }
+    }
+    END {
+        for (e in best) printf "%s\t%s\t%s\t%s\n", e, earfcn_to_band(e), best[e], pcis[e]
+    }'
+}
+
+# qccainfo_parse — вытаскиваем EARFCN из числовых полей. В ответе
+# перемешаны ширины канала (5/10/15/20/25) — они маппятся в B1 ложно,
+# поэтому отсекаем всё ≤ 50 (реальные DL EARFCN начинаются с ~75).
+qccainfo_parse() {
+    awk "$awk_table"'
+    /\$QCCAINFO:/ || /QCCAINFO:/ {
+        line = $0
+        gsub(/[^0-9,]/, "", line)
+        n = split(line, f, ",")
+        for (i = 1; i <= n; i++) {
+            b = earfcn_to_band(f[i])
+            if (b > 0 && f[i]+0 > 50 && !(f[i] in seen)) { seen[f[i]] = 1; printf "%s\t%s\t%s\t%s\n", f[i], b, "", "" }
+        }
+    }'
+}
+
+once() {
+    # mkdir-lock против гонки с соседним CGI/терминалом. В loop-режиме
+    # лок снимаем в конце каждого прохода (trap EXIT срабатывает лишь
+    # при смерти процесса — без снятия тут поллер отработал бы один раз).
+    if [ -d "$LOCK" ]; then
+        # stale-lock старше 30 секунд (поллер убит посреди once) — воруем
+        _now=$(date +%s 2>/dev/null || echo 0)
+        _lt=$(date -r "$LOCK" +%s 2>/dev/null || echo 0)
+        [ $((_now - _lt)) -gt 30 ] && rm -rf "$LOCK"
+    fi
+    if ! mkdir "$LOCK" 2>/dev/null; then
+        return 0
+    fi
+    trap 'rm -rf "$LOCK"' EXIT
+
+    : > "$TMP"
+    {
+        _qc=$(at_query 'AT$QCRSRP?' | qcrsrp_parse)
+        # $QCCAINFO на этом модеме нет (ERROR) — опрашивать нечего, но
+        # merge-логику оставляем на случай других билдов.
+        _ca=""
+
+        # Объединяем по EARFCN (предпочитаем строку с RSRP) и собираем JSON
+        # одним awk — без sort|read-пайплайна (busybox read с IFS в
+        # сабшелле-пайплайна ведёт себя ненадёжно).
+        printf '%s\n%s\n' "$_qc" "$_ca" | awk "$awk_table"'
+            NF >= 2 && $1 != "" {
+                e = $1
+                if (!(e in have) || ($3 != "" && have_r[e] == "")) {
+                    have[e] = 1; have_r[e] = $3; have_p[e] = $4
+                }
+            }
+            END {
+                n = 0
+                for (e in have) { n++; ef[n] = e }
+                # сортировка по RSRP desc (PCC первым)
+                for (i = 1; i < n; i++)
+                    for (j = i+1; j <= n; j++)
+                        if (have_r[ef[j]]+0 > have_r[ef[i]]+0) {
+                            t = ef[i]; ef[i] = ef[j]; ef[j] = t
+                        }
+                printf "{\"cells\":["
+                for (i = 1; i <= n; i++) {
+                    e = ef[i]
+                    rsrp = have_r[e]; if (rsrp == "") rsrp = "null"
+                    pci = have_p[e];  if (pci == "")  pci = "null"
+                    printf "%s{\"type\":\"%s\",\"earfcn\":%s,\"band\":%s,\"pci\":%s,\"rsrp\":%s}", \
+                        (i > 1 ? "," : ""), (i == 1 ? "pcc" : "scc"), \
+                        e, earfcn_to_band(e), pci, rsrp
+                }
+                printf "],\"bands\":[]}"
+            }'
+    } > "$TMP" 2>/dev/null
+
+    # защита от мигания: пустой/мусорный тик не затирает непустой кэш
+    # моложе 60 секунд (иначе дашборд мигал бы "агрегация → нет" на каждом
+    # обрезанном ответе)
+    if ! grep -q '"cells":\[{' "$TMP" 2>/dev/null; then
+        if grep -q '"cells":\[{' "$CACHE" 2>/dev/null; then
+            _om=$(stat -c %Y "$CACHE" 2>/dev/null || echo 0)
+            _nw=$(date +%s 2>/dev/null || echo 0)
+            if [ $((_nw - _om)) -lt 60 ]; then
+                rm -rf "$LOCK"
+                trap - EXIT
+                return 0
+            fi
+        fi
+    fi
+
+    # bands/ca — добиваем jq'ом поверх готового cells
+    if command -v jq >/dev/null 2>&1; then
+        jq -c '.bands = ([.cells[].band | select(. > 0)] | unique | sort) | .ca = ((.cells | length) > 1)' \
+            "$TMP" > "${TMP}.j" && mv "${TMP}.j" "$TMP"
+    fi
+    mv "$TMP" "$CACHE"
+    rm -rf "$LOCK"
+    trap - EXIT
+}
+
+loop() {
+    log "start, interval ${INTERVAL}s, dev $AT_DEV"
+    while :; do
+        once
+        sleep "$INTERVAL"
+    done
+}
+
+case "${1:-once}" in
+    once) once ;;
+    loop) loop ;;
+    *) echo "usage: $0 [once|loop]" >&2; exit 1 ;;
+esac

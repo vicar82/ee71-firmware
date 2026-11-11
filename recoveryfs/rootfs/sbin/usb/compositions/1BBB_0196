@@ -1,0 +1,48 @@
+#!/bin/ash
+
+echo "Switching to composition number VID=1BBB PID=0196"
+
+if [ "$1" = "y" ]; then
+	num="1"
+else
+	num="0"
+fi
+
+if [ "$#" -ge 2 ]; then
+	delay=$2
+else
+	delay="0"
+fi
+
+if [ "$#" -ge 3 ]; then
+	from_adb=$3
+else
+	from_adb="n"
+fi
+
+run_jrd_usb() {
+	if [ $from_adb = "n" ]
+	then
+		pkill adbd
+	fi
+	echo 0 > /sys/class/android_usb/android$num/enable
+	echo "0196" > /sys/class/android_usb/android$num/idProduct
+	echo "1BBB" > /sys/class/android_usb/android$num/idVendor
+	echo diag > /sys/class/android_usb/android$num/f_diag/clients
+  	echo smd > /sys/class/android_usb/android0/f_serial/transports
+	echo rndis_qc,diag,ffs,serial,mass_storage > /sys/class/android_usb/android$num/functions
+	echo BAM2BAM_IPA > /sys/class/android_usb/android$num/f_rndis_qc/rndis_transports
+	echo 1 > /sys/class/android_usb/android$num/remote_wakeup
+	echo 1 > /sys/class/android_usb/android$num/f_rndis_qc/wceis
+	
+
+	sleep $delay
+	echo 1 > /sys/class/android_usb/android$num/enable
+	if [ $from_adb = "n" ]
+	then
+		/etc/init.d/adbd start
+	fi
+}
+
+run_jrd_usb &
+

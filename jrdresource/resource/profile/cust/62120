@@ -1,0 +1,5 @@
+name:Airtel WAP
+apn:wap.ng.zain.com
+dial:*99#
+user:wap
+psw:wap

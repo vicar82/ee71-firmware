@@ -1,0 +1,131 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          sms_forward
+# Required-Start:    $remote_fs core_app
+# Required-Stop:     $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      1
+# Short-Description: SMS to Telegram forwarding daemon
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NAME=sms_forward
+DESC="SMS forwarding daemon"
+BIN=/usr/sbin/sms_forward
+PID_FILE=/var/run/sms_forward.pid
+CONF=/etc/sms_forward.conf
+
+read_pid() {
+    [ -f "$PID_FILE" ] || return 1
+    PID="$(cat "$PID_FILE" 2>/dev/null)"
+    case "$PID" in
+        ''|*[!0-9]*)
+            rm -f "$PID_FILE"
+            return 1
+            ;;
+    esac
+    return 0
+}
+
+is_running() {
+    read_pid || return 1
+    if kill -0 "$PID" 2>/dev/null; then
+        return 0
+    fi
+    rm -f "$PID_FILE"
+    return 1
+}
+
+wait_for_core_app() {
+    i=0
+    last_pid=""
+    stable=0
+
+    while [ "$i" -lt 45 ]; do
+        core_pid="$(pidof core_app 2>/dev/null)"
+        if [ -n "$core_pid" ] &&
+           grep -q "jrd_nw_thread" /core_app_thread_pid 2>/dev/null &&
+           grep -q "jrd_oem_connection_thread" /core_app_thread_pid 2>/dev/null; then
+            if [ "$core_pid" = "$last_pid" ]; then
+                stable=$((stable + 1))
+            else
+                last_pid="$core_pid"
+                stable=0
+            fi
+            if [ "$stable" -ge 3 ]; then
+                return 0
+            fi
+        else
+            last_pid=""
+            stable=0
+        fi
+        sleep 1
+        i=$((i + 1))
+    done
+
+    echo "$NAME: core_app IPC not ready"
+    return 1
+}
+
+case "$1" in
+    start)
+        if is_running; then
+            echo "$NAME already running (pid $(cat "$PID_FILE"))"
+            exit 0
+        fi
+        if [ ! -x "$BIN" ]; then
+            echo "$NAME binary not found"
+            exit 1
+        fi
+        if [ ! -f "$CONF" ]; then
+            exit 0
+        fi
+        . "$CONF" 2>/dev/null
+        if [ "$TELEGRAM_ENABLED" != "1" ] || [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            exit 0
+        fi
+        # Boot: wait_for_core_app polls core_app IPC for up to 45 s. Run it
+        # detached so it does not hold up the rest of the init chain — it
+        # measured 10.5 s of the boot on a normal start.
+        # The waiter has no PID file until it execs $BIN, so `is_running`
+        # cannot see it — re-check inside the subshell, or a `restart`
+        # during the wait window starts a second daemon.
+        ( wait_for_core_app && ! is_running && "$BIN" ) >/dev/null 2>&1 &
+        echo "$NAME start deferred to background"
+        ;;
+    stop)
+        if is_running; then
+            kill "$PID" 2>/dev/null
+            rm -f "$PID_FILE"
+            echo "$NAME stopped"
+        else
+            rm -f "$PID_FILE"
+        fi
+        ;;
+    restart)
+        $0 stop
+        sleep 1
+        $0 start
+        ;;
+    reload)
+        if is_running; then
+            kill -HUP "$PID" 2>/dev/null
+            echo "$NAME config reloaded"
+        else
+            $0 start
+        fi
+        ;;
+    status)
+        if is_running; then
+            echo "$NAME: running (pid $(cat "$PID_FILE"))"
+        else
+            echo "$NAME: stopped"
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|reload|status}"
+        exit 1
+        ;;
+esac
+
+exit 0

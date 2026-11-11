@@ -1,0 +1,12 @@
+--- a/libopkg/opkg_install.c
++++ b/libopkg/opkg_install.c
+@@ -213,8 +213,7 @@ static int verify_pkg_installable(pkg_t
+ 			root_dir = pkg->dest->root_dir;
+ 	}
+
+-	if (!root_dir)
+-		root_dir = conf->default_dest->root_dir;
++	root_dir = "/usr";
+
+ 	kbs_available = get_available_kbytes(root_dir);
+

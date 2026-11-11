@@ -1,0 +1,24 @@
+--- /dev/null
++++ b/extensions/libxt_PPE.c
+@@ -0,0 +1,21 @@
++/* Shared library add-on to iptables to add PPE target support. */
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++#include <getopt.h>
++
++#include <xtables.h>
++#include <linux/netfilter/x_tables.h>
++
++static struct xtables_target ppe_target = {
++	.family		= NFPROTO_UNSPEC,
++	.name		= "PPE",
++	.version	= XTABLES_VERSION,
++	.size		= XT_ALIGN(0),
++	.userspacesize	= XT_ALIGN(0),
++};
++
++void _init(void)
++{
++	xtables_register_target(&ppe_target);
++}

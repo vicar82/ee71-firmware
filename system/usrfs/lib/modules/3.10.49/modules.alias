@@ -1,0 +1,14 @@
+# Aliases extracted from modules themselves.
+alias des des_generic
+alias des3_ede des_generic
+alias stdrng ansi_cprng
+alias spi:spidev spidev
+alias of:N*T*Crohm,dh2228fv* spidev
+alias pci:v00001969d00001090sv*sd*bc*sc*i* alx
+alias pci:v00001969d00001091sv*sd*bc*sc*i* alx
+alias pci:v00001969d00002062sv*sd*bc*sc*i* alx
+alias pci:v00001969d00002060sv*sd*bc*sc*i* alx
+alias pci:v00001969d00001083sv*sd*bc*sc*i* alx
+alias pci:v00001969d00001073sv*sd*bc*sc*i* alx
+alias pci:v00001969d00001062sv*sd*bc*sc*i* alx
+alias pci:v00001969d00001063sv*sd*bc*sc*i* alx
