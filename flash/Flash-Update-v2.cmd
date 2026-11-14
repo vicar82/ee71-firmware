@@ -32,9 +32,9 @@ timeout /t 20 /nobreak >nul
 
 echo === Шаг 4/4: прошивка system + jrdresource ===
 fastboot erase system  || goto :fb_err
-fastboot flash system images\mdm9640-sysfs-v1.ubi    || goto :fb_err
+fastboot flash system images\mdm9640-sysfs-v1.3.1.ubi    || goto :fb_err
 fastboot erase jrdresource || goto :fb_err
-fastboot flash jrdresource images\jrdresource-v1.ubi || goto :fb_err
+fastboot flash jrdresource images\jrdresource-v1.3.1.ubi || goto :fb_err
 
 fastboot reboot
 echo.

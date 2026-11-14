@@ -11,7 +11,7 @@
 
 | Файл | Назначение |
 |---|---|
-| `Flash-Update-v2.cmd` | **Основной**: обновление system + jrdresource до наших сборок v1.3 |
+| `Flash-Update-v2.cmd` | **Основной**: обновление system + jrdresource до наших сборок v1.3.1 |
 | `Flash-Full-v2.cmd` | Полный комплект (boot chain + modem + всё), с подтверждением YES |
 | `flash.sh` | То же, что Update-v2, для macOS/Linux |
 | `images/mdm9640-sysfs-v1.ubi` | наш system (ubi0: rootfs+usrfs) |

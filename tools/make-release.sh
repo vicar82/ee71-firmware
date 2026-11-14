@@ -6,7 +6,7 @@
 set -e
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-VERSION=${1:-v1.3}
+VERSION=${1:-v1.3.1}
 DIR="EE71-firmware-$VERSION"
 OUT="$ROOT/release/$DIR"
 KIT="$ROOT/release/unbrick-kit"

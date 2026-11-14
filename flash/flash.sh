@@ -31,9 +31,9 @@ fastboot devices | grep -q . || die "устройство не появилос�
 echo "=== Шаг 4/4: прошивка system + jrdresource ===
 "
 fastboot erase system         || die "erase system"
-fastboot flash system images/mdm9640-sysfs-v1.ubi    || die "flash system"
+fastboot flash system images/mdm9640-sysfs-v1.3.1.ubi    || die "flash system"
 fastboot erase jrdresource    || die "erase jrdresource"
-fastboot flash jrdresource images/jrdresource-v1.ubi || die "flash jrdresource"
+fastboot flash jrdresource images/jrdresource-v1.3.1.ubi || die "flash jrdresource"
 
 fastboot reboot
 echo
